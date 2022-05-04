@@ -5,6 +5,9 @@
 .env.local
 .env.prod
 
+# File DB
+.data/
+
 # Created by https://www.toptal.com/developers/gitignore/api/vim,visualstudiocode,macos,linux
 # Edit at https://www.toptal.com/developers/gitignore?templates=vim,visualstudiocode,macos,linux
 

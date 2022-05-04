@@ -1,8 +1,8 @@
 {
   "tasks": {
-    "dev": "cp env/.env.local env/.env && deno run --watch --allow-env --allow-net=discord.com,gateway.discord.gg --allow-read src/main.ts",
+    "dev": "cp env/.env.local env/.env && deno run --watch --allow-env --allow-net=discord.com,gateway.discord.gg --allow-read --allow-write=./.data src/main.ts",
     "cache": "deno cache src/deps/*",
-    "test": "RUST_BACKTRACE=1 deno test --allow-env --allow-read",
+    "test": "deno test",
     "typecheck": "deno cache main.ts"
   }
 }
