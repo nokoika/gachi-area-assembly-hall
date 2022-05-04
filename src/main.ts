@@ -1,6 +1,10 @@
-import { createBot, startBot } from "./deps.ts";
-import { enableCachePlugin, enableCacheSweepers } from "./deps.ts";
-import { discordEnv } from "./env.ts"
+import { createBot, sendMessage, startBot } from "./deps/discordeno.ts";
+import {
+  enableCachePlugin,
+  enableCacheSweepers,
+} from "./deps/discordeno_cache_plugin.ts";
+import { discordEnv } from "./env.ts";
+import { generateTrainingMatchResultMessage } from "./generateBotMessage.ts";
 
 const baseBot = createBot({
   token: discordEnv.token,
@@ -10,8 +14,17 @@ const baseBot = createBot({
     ready() {
       console.log("Successfully connected to gateway");
     },
-    messageCreate(bot: any, message: any) {
-      // Process the message with your command handler here
+    messageCreate(bot, message) {
+      if (
+        message.content === "p" &&
+        message.channelId === discordEnv.channelIds.preparationMatch
+      ) {
+        sendMessage(
+          bot,
+          discordEnv.channelIds.preparationMatch,
+          generateTrainingMatchResultMessage(),
+        );
+      }
     },
   },
 });

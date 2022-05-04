@@ -3,5 +3,6 @@
   "deno.unstable": false,
   "editor.formatOnSave": true,
   "editor.formatOnPaste": true,
-  "deno.lint": true,
+  "editor.defaultFormatter": "denoland.vscode-deno",
+  "deno.lint": true
 }
