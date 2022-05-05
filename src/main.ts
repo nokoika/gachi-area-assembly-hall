@@ -5,6 +5,7 @@ import {
 } from "./deps/discordeno_cache_plugin.ts";
 import { discordEnv } from "./env.ts";
 import { eventHandlers } from "./eventHandlers.ts";
+import { registerSchedules } from "./registerSchedules.ts";
 
 const baseBot = createBot({
   token: discordEnv.token,
@@ -13,8 +14,9 @@ const baseBot = createBot({
   events: eventHandlers,
 });
 
-const bot = enableCachePlugin(baseBot);
+registerSchedules(baseBot);
 
+const bot = enableCachePlugin(baseBot);
 enableCacheSweepers(bot);
 
 await startBot(bot);

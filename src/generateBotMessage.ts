@@ -5,7 +5,7 @@ import {
   MessageComponentTypes,
 } from "./deps/discordeno.ts";
 import dayjs from "./deps/dayjs.ts";
-import { ButtonId, MatchType } from "./constants.ts";
+import { ApplicationType, MatchType } from "./constants.ts";
 
 type MatchDetail = {
   confirmed: boolean; // マッチングが確定しているかどうか
@@ -139,19 +139,19 @@ export const generateTrainingMatchRecruitingMessage = (): CreateMessage => {
         components: [
           {
             type: MessageComponentTypes.Button,
-            customId: ButtonId.ApplyFrontPlayer,
+            customId: ApplicationType.ApplyFrontPlayer,
             style: ButtonStyles.Primary,
             label: "参加申請する(後衛以外)",
           },
           {
             type: MessageComponentTypes.Button,
-            customId: ButtonId.ApplyBackPlayer,
+            customId: ApplicationType.ApplyBackPlayer,
             style: ButtonStyles.Secondary,
             label: "参加申請する(後衛)",
           },
           {
             type: MessageComponentTypes.Button,
-            customId: ButtonId.Cancel,
+            customId: ApplicationType.Cancel,
             style: ButtonStyles.Danger,
             label: "キャンセル",
           },

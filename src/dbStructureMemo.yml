@@ -1,0 +1,34 @@
+users:
+  id: UUID # ULID使いたいけど、どっちみちFileDBなので妥協
+  discordUserId: string
+  friendCode: string
+  udemae: string # 申請のたびにロールと同期する。 'X2300' | 'X2400' | ... | 'X3100'
+  createdAt: Date
+  updateAt: Date
+recruitments:
+  id: UUID
+  willStartAt: Date
+  createdAt: Date
+  updateAt: Date
+applications: # 申請=applicationとする
+  id: UUID
+  recruitmentId: UUID
+  userId: UUID
+  applicationType: string # 'apply-front-player' | 'apply-back-player'
+  createdAt: Date
+  updatedAt: Date
+  deletedAt: Date? # キャンセルで申請を削除。再度申請する場合は新しくapplicationを追加
+
+# 以下ログ用 (アプリとしては無くても成立する)
+
+recruitmentLogs:
+  id: UUID
+  recruitment: Recruitment
+  applications: Application[]
+  rooms:
+    id: UUID
+    textChannelIdx: number
+    players: User[]
+    hostUserId: UUID
+  createdAt: Date
+  updatedAt: Date
