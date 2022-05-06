@@ -2,7 +2,7 @@ import { MatchType } from "./constants.ts";
 import { AreaSchedule, Recruitment } from "./entities.ts";
 import dayjs from "./deps/dayjs.ts";
 import { CreateArg } from "./utils/document.ts";
-import { today } from "./utils/date.ts";
+import { isRecent, today } from "./utils/date.ts";
 
 const createPreparationRecruitment = (
   willStartAt: dayjs.Dayjs,
@@ -37,7 +37,7 @@ export const createRecruitmentsFromSchedules = (
   const trainingRecruitments: CreateArg<Recruitment>[] = possibleTrainings
     // 0次会と重複するものを除外
     .filter((d) =>
-      preparationRecruitments.find((r) => d.diff(r.willStartAt, "m") > 30)
+      preparationRecruitments.find((r) => isRecent(r.willStartAt, d))
     )
     .map(createTrainingRecruitment);
   const merged = [...preparationRecruitments, ...trainingRecruitments]

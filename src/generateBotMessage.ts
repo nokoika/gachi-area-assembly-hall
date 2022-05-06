@@ -8,6 +8,7 @@ import dayjs from "./deps/dayjs.ts";
 import { ApplicationType, MatchType } from "./constants.ts";
 import { Recruitment } from "./entities.ts";
 import { CreateArg } from "./utils/document.ts";
+import { discordEnv } from "./env.ts";
 
 type MatchDetail = {
   confirmed: boolean; // マッチングが確定しているかどうか
@@ -16,10 +17,10 @@ type MatchDetail = {
   // TODO: Union型で表現する
   parentFriendCode?: string;
   willStartAt: Date;
-  stageNames: string[];
+  stages: string[];
 };
 
-const getMatchTypeText = (matchType: MatchType): string => {
+const toMatchTypeText = (matchType: MatchType): string => {
   const texts = {
     [MatchType.Preparation]: "0次会プラベ",
     [MatchType.Training]: "トレーニングマッチ",
@@ -27,7 +28,7 @@ const getMatchTypeText = (matchType: MatchType): string => {
   return texts[matchType];
 };
 
-const getMatchStatusText = (matchConfirmed: boolean): string => {
+const toMatchStatusText = (matchConfirmed: boolean): string => {
   return matchConfirmed ? "開催決定！" : "参加者募集中！";
 };
 
@@ -35,7 +36,7 @@ const wrapCodeblock = (text: string): string => {
   return "```\n" + text + "```";
 };
 
-const getMatchPlanText = (matchType: MatchType): string => {
+const toMatchPlainText = (matchType: MatchType): string => {
   const texts = {
     [MatchType.Preparation]: "各ステージを交互に3戦ずつ",
     [MatchType.Training]: "各ステージ1戦ずつ",
@@ -43,36 +44,34 @@ const getMatchPlanText = (matchType: MatchType): string => {
   return texts[matchType];
 };
 
-const getStageText = (matchType: MatchType, stageNames: string[]) => {
+const toStageText = (matchType: MatchType, stages: string[]) => {
   if (matchType === MatchType.Training) {
     return "今月のステージ";
   }
-  return stageNames.join("/");
+  return stages.join("/");
 };
 
-const getDateText = (date: Date | dayjs.Dayjs): string => {
+const toDateText = (date: Date | dayjs.Dayjs): string => {
   return dayjs(date).format("YYYY-MM-DD");
 };
 
-const getTimeText = (date: Date | dayjs.Dayjs): string => {
-  return dayjs(date).format("hh:mm");
+const toTimeText = (date: Date | dayjs.Dayjs): string => {
+  return dayjs(date).format("HH:mm");
 };
 
-const getDateTimeText = (date: Date | dayjs.Dayjs): string => {
-  return dayjs(date).format("YYYY-MM-DD hh:mm");
+const toDateTimeText = (date: Date | dayjs.Dayjs): string => {
+  return dayjs(date).format("YYYY-MM-DD HH:mm");
 };
 
 export const generateMatchEmbed = (matchDetail: MatchDetail): Embed => {
-  const title = getMatchTypeText(matchDetail.type) +
-    getMatchStatusText(matchDetail.confirmed);
+  const title = toMatchTypeText(matchDetail.type) +
+    toMatchStatusText(matchDetail.confirmed);
 
   const fields = [
     {
       name: ":alarm_clock: 開催日時",
       value: wrapCodeblock(
-        dayjs(matchDetail.willStartAt).minute(20).format(
-          "YYYY/MM/DD HH:mm",
-        ),
+        toDateTimeText(dayjs(matchDetail.willStartAt).minute(20)),
       ),
       inline: false,
     },
@@ -84,13 +83,13 @@ export const generateMatchEmbed = (matchDetail: MatchDetail): Embed => {
     {
       name: ":park: ステージ",
       value: wrapCodeblock(
-        getStageText(matchDetail.type, matchDetail.stageNames),
+        toStageText(matchDetail.type, matchDetail.stages),
       ),
       inline: true,
     },
     {
       name: ":bar_chart: 試合数など",
-      value: wrapCodeblock(getMatchPlanText(matchDetail.type)),
+      value: wrapCodeblock(toMatchPlainText(matchDetail.type)),
       inline: false,
     },
     {
@@ -138,15 +137,22 @@ export const generateMatchEmbed = (matchDetail: MatchDetail): Embed => {
   };
 };
 
-export const generateTrainingMatchRecruitingMessage = (): CreateMessage => {
+export const getRecruitingChannel = (matchType: MatchType): bigint => {
+  const o = {
+    [MatchType.Preparation]: discordEnv.channelIds.preparationMatch,
+    [MatchType.Training]: discordEnv.channelIds.trainingMatch,
+  };
+  return o[matchType];
+};
+
+export const generateRecruitingMessage = (
+  { willStartAt, stages, type }: Recruitment,
+): CreateMessage => {
   return {
     content: "@everyone",
-    embeds: [generateMatchEmbed({
-      confirmed: false,
-      type: MatchType.Preparation,
-      willStartAt: new Date(),
-      stageNames: ["海女美術大学", "マンタマリア号"],
-    })],
+    embeds: [
+      generateMatchEmbed({ confirmed: false, type, willStartAt, stages }),
+    ],
     components: [
       {
         type: MessageComponentTypes.ActionRow,
@@ -175,6 +181,17 @@ export const generateTrainingMatchRecruitingMessage = (): CreateMessage => {
   };
 };
 
+export const generateInsufficientMessage = (
+  currentRoom: number,
+  remainder: number,
+): CreateMessage => {
+  return {
+    content: `@everyone ↑${currentRoom + 1}部屋${
+      currentRoom >= 1 ? "同時" : ""
+    }開催まであと${8 - remainder}人です！`,
+  };
+};
+
 export const generateTrainingMatchResultMessage = (): CreateMessage => {
   return {
     embeds: [generateMatchEmbed({
@@ -182,7 +199,7 @@ export const generateTrainingMatchResultMessage = (): CreateMessage => {
       type: MatchType.Preparation,
       parentFriendCode: "0000-0000-0000",
       willStartAt: new Date(),
-      stageNames: ["海女美術大学", "マンタマリア号"],
+      stages: ["海女美術大学", "マンタマリア号"],
     })],
   };
 };
@@ -195,12 +212,12 @@ const generateScheduleEmbed = (
     type: "rich",
     color: 15576321,
     fields: [{
-      name: `:date: ${getDateText(recruitments[0].willStartAt)}`,
+      name: `:date: ${toDateText(recruitments[0].willStartAt)}`,
       value: wrapCodeblock(
         recruitments
           .map((r) =>
-            getTimeText(r.willStartAt) + " " + getMatchTypeText(r.type) +
-            (r.type === MatchType.Preparation ? `(${r.stages.join("/")})` : "")
+            toTimeText(r.willStartAt) + " " + toMatchTypeText(r.type) +
+            (r.type === MatchType.Preparation ? ` (${r.stages.join("/")})` : "")
           )
           .join("\n"),
       ),
