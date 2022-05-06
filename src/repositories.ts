@@ -38,9 +38,9 @@ export const recruitmentRepository = {
   getCollection(): Promise<Collection<Recruitment>> {
     return db.getCollection<Recruitment>("recruitment");
   },
-  async insert(data: CreateArg<Recruitment>): Promise<void> {
+  async insertMany(dataList: CreateArg<Recruitment>[]): Promise<void> {
     const collection = await this.getCollection();
-    collection.insertOne(createDocument(data));
+    collection.insertMany(dataList.map(createDocument));
   },
 };
 

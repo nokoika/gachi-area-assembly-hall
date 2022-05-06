@@ -6,6 +6,8 @@ import {
 } from "./deps/discordeno.ts";
 import dayjs from "./deps/dayjs.ts";
 import { ApplicationType, MatchType } from "./constants.ts";
+import { Recruitment } from "./entities.ts";
+import { CreateArg } from "./utils/document.ts";
 
 type MatchDetail = {
   confirmed: boolean; // マッチングが確定しているかどうか
@@ -48,6 +50,18 @@ const getStageText = (matchType: MatchType, stageNames: string[]) => {
   return stageNames.join("/");
 };
 
+const getDateText = (date: Date | dayjs.Dayjs): string => {
+  return dayjs(date).format("YYYY-MM-DD");
+};
+
+const getTimeText = (date: Date | dayjs.Dayjs): string => {
+  return dayjs(date).format("hh:mm");
+};
+
+const getDateTimeText = (date: Date | dayjs.Dayjs): string => {
+  return dayjs(date).format("YYYY-MM-DD hh:mm");
+};
+
 export const generateMatchEmbed = (matchDetail: MatchDetail): Embed => {
   const title = getMatchTypeText(matchDetail.type) +
     getMatchStatusText(matchDetail.confirmed);
@@ -56,7 +70,7 @@ export const generateMatchEmbed = (matchDetail: MatchDetail): Embed => {
     {
       name: ":alarm_clock: 開催日時",
       value: wrapCodeblock(
-        dayjs(matchDetail.willStartAt).add(20, "m").format(
+        dayjs(matchDetail.willStartAt).minute(20).format(
           "YYYY/MM/DD HH:mm",
         ),
       ),
@@ -170,5 +184,36 @@ export const generateTrainingMatchResultMessage = (): CreateMessage => {
       willStartAt: new Date(),
       stageNames: ["海女美術大学", "マンタマリア号"],
     })],
+  };
+};
+
+const generateScheduleEmbed = (
+  recruitments: CreateArg<Recruitment>[],
+): Embed => {
+  return {
+    title: "スケジュール",
+    type: "rich",
+    color: 15576321,
+    fields: [{
+      name: `:date: ${getDateText(recruitments[0].willStartAt)}`,
+      value: wrapCodeblock(
+        recruitments
+          .map((r) =>
+            getTimeText(r.willStartAt) + " " + getMatchTypeText(r.type) +
+            (r.type === MatchType.Preparation ? `(${r.stages.join("/")})` : "")
+          )
+          .join("\n"),
+      ),
+      inline: false,
+    }],
+  };
+};
+
+export const generateScheduleMessage = (
+  recruitments: CreateArg<Recruitment>[],
+): CreateMessage => {
+  return {
+    content: "@everyone",
+    embeds: [generateScheduleEmbed(recruitments)],
   };
 };

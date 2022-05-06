@@ -1,15 +1,30 @@
 import { Bot } from "./deps/discordeno.ts";
+import { fetchAreaSchedule } from "./fetchAreaSchedule.ts";
+import { recruitmentRepository } from "./repositories.ts";
+import { createRecruitmentsFromSchedules } from "./logics.ts";
+import { generateScheduleMessage } from "./generateBotMessage.ts";
+import { discordEnv } from "./env.ts";
+
 export const scheduleHandlers = {
   // #スケジュール に当日の開催予定表をコメントする
-  sendScheduleMessage(bot: Bot): void {},
+  async sendScheduleMessage(bot: Bot): Promise<void> {
+    const areaSchedules = await fetchAreaSchedule();
+
+    // 予定をDBにいれておく (冪等にしたほうがいいか？)
+    const recruitments = createRecruitmentsFromSchedules(areaSchedules);
+    await recruitmentRepository.insertMany(recruitments);
+
+    const message = generateScheduleMessage(recruitments);
+    await bot.helpers.sendMessage(discordEnv.channelIds.schedule, message);
+  },
   // #トレーニングマッチ で募集コメントをする
-  sendTrainingMatchRecruitingMessage(bot: Bot): void {},
+  async sendTrainingMatchRecruitingMessage(bot: Bot): Promise<void> {},
   // #トレーニングマッチ にて、参加者が不足しているときにコメントする
-  resendTrainingMatchRecruitingMessage(bot: Bot): void {},
+  async resendTrainingMatchRecruitingMessage(bot: Bot): Promise<void> {},
   // #0次会プラべ で募集コメントをする
-  sendPreparationMatchRecruitingMessage(bot: Bot): void {},
+  async sendPreparationMatchRecruitingMessage(bot: Bot): Promise<void> {},
   // #0次会プラべ にて、参加者が不足しているときにコメントする
-  resendPreparationMatchRecruitingMessage(bot: Bot): void {},
+  async resendPreparationMatchRecruitingMessage(bot: Bot): Promise<void> {},
   // マッチング結果をルーム1~5およびDMにて通知する
-  sendMatchResult(bot: Bot): void {},
+  async sendMatchResult(bot: Bot): Promise<void> {},
 };

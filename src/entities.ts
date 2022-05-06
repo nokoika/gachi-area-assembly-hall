@@ -1,4 +1,4 @@
-import { ApplicationType, Udemae } from "./constants.ts";
+import { ApplicationType, MatchType, Udemae } from "./constants.ts";
 import { Document, UUID } from "./utils/document.ts";
 
 // TODO: あとでファイルを分割する
@@ -10,6 +10,8 @@ export type User = Document<{
 }>;
 
 export type Recruitment = Document<{
+  type: MatchType;
+  stages: string[];
   willStartAt: Date;
 }>;
 
@@ -30,3 +32,9 @@ export type RecruitmentLog = Document<{
     hostUserId: UUID;
   };
 }>;
+
+export type AreaSchedule = {
+  maps: string[];
+  start: Date;
+  end: Date;
+};

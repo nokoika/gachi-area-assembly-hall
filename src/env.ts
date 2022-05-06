@@ -6,6 +6,7 @@ type DiscordEnv = {
   token: string;
   botId: bigint;
   channelIds: {
+    schedule: bigint;
     friendCode: bigint;
     preparationMatch: bigint;
     trainingMatch: bigint;
@@ -17,6 +18,7 @@ export const discordEnv: DiscordEnv = (() => {
   const token = Deno.env.get("DISCORD_TOKEN");
   const botId = Deno.env.get("BOT_ID");
   const channelIds = {
+    schedule: Deno.env.get("CHANNEL_SCHEDULE"),
     friendCode: Deno.env.get("CHANNEL_FRIEND_CODE"),
     preparationMatch: Deno.env.get("CHANNEL_PREPARATION_MATCH"),
     trainingMatch: Deno.env.get("CHANNEL_TRAINING_MATCH"),
@@ -34,6 +36,9 @@ export const discordEnv: DiscordEnv = (() => {
   }
   if (!botId) {
     throw new Error("env var BOT_ID is not set");
+  }
+  if (!channelIds.schedule) {
+    throw new Error("env var CHANNEL_SCHEDULE is not set");
   }
   if (!channelIds.friendCode) {
     throw new Error("env var CHANNEL_FRIEND_CODE is not set");
@@ -55,6 +60,7 @@ export const discordEnv: DiscordEnv = (() => {
     token,
     botId: BigInt(botId),
     channelIds: {
+      schedule: BigInt(channelIds.schedule),
       friendCode: BigInt(channelIds.friendCode),
       preparationMatch: BigInt(channelIds.preparationMatch),
       trainingMatch: BigInt(channelIds.trainingMatch),
