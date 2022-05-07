@@ -234,3 +234,48 @@ export const generateScheduleMessage = (
     embeds: [generateScheduleEmbed(recruitments)],
   };
 };
+
+export const generateNotRecruitingMessage = (): string => {
+  return "現在募集時間外のため、申請できませんでした。";
+};
+
+export const generateNotFriendCodeRegisteredMessage = (
+  applicationType: ApplicationType,
+): string => {
+  const typeText = applicationType === ApplicationType.Cancel
+    ? "キャンセル申請"
+    : "参加申請";
+  return `フレンドコードが未登録のため、${typeText}を受理できませんでした。\n<#${discordEnv.channelIds.friendCode}> にて、自分のコードを登録してください。`;
+};
+
+export const generateChangeApplicationTypeMessage = (
+  applicationType: ApplicationType,
+): string => {
+  const typeText = applicationType === ApplicationType.ApplyFrontPlayer
+    ? "後衛以外"
+    : "後衛";
+  return typeText + "枠に参加申請を変更しました。";
+};
+
+export const generateCreateApplicationMessage = (
+  applicationType: ApplicationType,
+): string => {
+  const typeText = applicationType === ApplicationType.ApplyFrontPlayer
+    ? "後衛以外"
+    : "後衛";
+  return typeText + "枠で参加申請しました。";
+};
+
+export const generateCanceledMessage = (): string => {
+  return "キャンセルしました！";
+};
+
+export const generateCancelFailedMessage = (): string => {
+  return "キャンセルは参加申請をしたときのみ行えます";
+};
+
+export const generateFriendCodeInvalidMessage = (
+  discordUserId: string,
+): string => {
+  return `<@${discordUserId}> お手数ですが、 \`XXXX-XXXX-XXXX\` の形式でフレンドコードの再入力をよろしくお願いします :pray:`;
+};

@@ -1,136 +1,131 @@
-import {
-  EventHandlers,
-  InteractionResponseTypes,
-  InteractionTypes,
-} from "./deps/discordeno.ts";
-import { generateTrainingMatchRecruitingMessage } from "./generateBotMessage.ts";
+import { EventHandlers, InteractionTypes } from "./deps/discordeno.ts";
 import { ApplicationType } from "./constants.ts";
 import { discordEnv } from "./env.ts";
-import { userQueryService } from "./queryServices.ts";
-import { userRepository } from "./repositories.ts";
-import dayjs from "./deps/dayjs.ts";
+import {
+  applicationQueryService,
+  recruitmentQueryService,
+  userQueryService,
+} from "./queryServices.ts";
+import {
+  applicationRepository,
+  discordInteractionRepository,
+  userRepository,
+} from "./repositories.ts";
+import { hasEnumValue } from "./utils/typeGuards.ts";
+import {
+  generateCanceledMessage,
+  generateCancelFailedMessage,
+  generateChangeApplicationTypeMessage,
+  generateCreateApplicationMessage,
+  generateFriendCodeInvalidMessage,
+  generateNotFriendCodeRegisteredMessage,
+  generateNotRecruitingMessage,
+} from "./generateBotMessage.ts";
 
 export const eventHandlers: Partial<EventHandlers> = {
   ready() {
     console.log("Successfully connected to gateway");
   },
+
+  // 主にbotが表示したボタンをユーザーが押したとき
   async interactionCreate(bot, interaction) {
     if (interaction.type !== InteractionTypes.MessageComponent) {
       return;
     }
-    switch (interaction.data?.customId) {
+    const applicationType = interaction.data?.customId ?? "";
+    if (!hasEnumValue(applicationType, ApplicationType)) {
+      return;
+    }
+    const recruitment = await recruitmentQueryService.findRecent();
+    const user = await userQueryService.findByDiscordId(
+      interaction.user.id.toString(),
+    );
+    if (!recruitment) {
+      // 申請ボタン消すからここまで丁寧に返信しなくてもよいが
+      const content = generateNotRecruitingMessage();
+      await discordInteractionRepository
+        .sendResponse(bot, interaction, content);
+      return;
+    }
+    if (!user) {
+      const content = generateNotFriendCodeRegisteredMessage(applicationType);
+      await discordInteractionRepository
+        .sendResponse(bot, interaction, content);
+      return;
+    }
+    switch (applicationType) {
       case ApplicationType.ApplyFrontPlayer:
       case ApplicationType.ApplyBackPlayer: {
-        const user = await userQueryService.findByDiscordId(
-          interaction.user.id.toString(),
-        );
-        let message: string;
-        if (!user) {
-          message =
-            `フレンドコードが未登録のため、参加申請を受理できませんでした。\n<#${discordEnv.channelIds.friendCode}> にて、自分のコードを登録してください。`;
+        let content: string;
+        const [application] = await applicationQueryService.find({
+          recruitmentId: recruitment.id,
+          userId: user.id,
+        });
+        if (application) {
+          await applicationRepository
+            .updateApplicationType(user.id, recruitment.id, applicationType);
+          content = generateChangeApplicationTypeMessage(applicationType);
         } else {
-          // TODO: すでに参加済ならすでに参加済とメッセージ出したい(かつ、前衛後衛変更できるようにしたい)
-          message =
-            (interaction.data.customId === ApplicationType.ApplyFrontPlayer
-              ? "後衛以外"
-              : "後衛") + "枠で参加申請しました。";
+          await applicationRepository.insert({
+            recruitmentId: recruitment.id,
+            userId: user.id,
+            applicationType,
+          });
+          content = generateCreateApplicationMessage(applicationType);
         }
 
-        await bot.helpers.sendInteractionResponse(
-          interaction.id,
-          interaction.token,
-          {
-            type: InteractionResponseTypes.ChannelMessageWithSource,
-            private: true, // 返信は本人だけが確認できる
-            data: {
-              content: message,
-            },
-          },
-        );
+        await discordInteractionRepository
+          .sendResponse(bot, interaction, content);
         break;
       }
       case ApplicationType.Cancel: {
-        await bot.helpers.sendInteractionResponse(
-          interaction.id,
-          interaction.token,
-          {
-            type: InteractionResponseTypes.ChannelMessageWithSource,
-            private: true, // 返信は本人だけが確認できる
-            data: {
-              content: "キャンセルしました!",
-            },
-          },
-        );
+        const [application] = await applicationQueryService.find({
+          recruitmentId: recruitment.id,
+          userId: user.id,
+        });
+        if (!application) {
+          const content = generateCancelFailedMessage();
+          await discordInteractionRepository
+            .sendResponse(bot, interaction, content);
+          return;
+        }
+        const content = generateCanceledMessage();
+        await applicationRepository.cancel(user.id, recruitment.id);
+        await discordInteractionRepository
+          .sendResponse(bot, interaction, content);
         break;
       }
     }
   },
+
+  // ユーザーがメッセージを書いたとき
   async messageCreate(bot, message) {
     // bot自身が送ったメッセージなら無視
-    if (message.isBot) {
-      return;
-    }
-    switch (message.channelId) {
-      case discordEnv.channelIds.preparationMatch: {
-        // testing
-        if (message.content === "p") {
-          await bot.helpers.sendMessage(
-            discordEnv.channelIds.preparationMatch,
-            generateTrainingMatchRecruitingMessage(),
-          );
-        } else if (message.content === "d") {
-          // チャンネルの投稿を概ね削除する
-          const messages = await bot.helpers.getMessages(
-            discordEnv.channelIds.preparationMatch,
-          );
-          // TODO: repositoryに移動する？
-          const deletableMessageIds = messages
-            // 14日経過したメッセージは削除することができないので、filterする。
-            // 境界条件をちゃんと調査していないので適当に12日以内のものに限定する
-            .filter((m) => dayjs(m.timestamp).add(12, "d").isAfter(dayjs()))
-            .map((m) => m.id);
-          // 2件未満だとbulkDeleteできない謎仕様なので、件数で分岐する
-          if (deletableMessageIds.length >= 2) {
-            await bot.helpers.deleteMessages(
-              discordEnv.channelIds.preparationMatch,
-              deletableMessageIds,
-            );
-          } else if (deletableMessageIds.length === 1) {
-            await bot.helpers.deleteMessage(
-              discordEnv.channelIds.preparationMatch,
-              deletableMessageIds[0],
-            );
-          }
-        }
-        break;
-      }
+    if (message.isBot) return;
+    // 現状、ユーザーが #フレンドコード に入力したときのみ監視している
+    if (message.channelId !== discordEnv.channelIds.friendCode) return;
 
-      // ユーザーが #フレンドコード に入力したとき
-
-      case discordEnv.channelIds.friendCode: {
-        const friendCode = message.content.trim();
-        // フレンドコードとして妥当かどうかチェック
-        const discordUserId = message.authorId.toString();
-        if (friendCode.match(/^\d{4}-\d{4}-\d{4}$/)) {
-          // 排他制御できてないがよしとする。。。
-          const user = await userQueryService.findByDiscordId(discordUserId);
-          if (user) {
-            await userRepository.updateFriendCode(discordUserId, friendCode);
-          } else {
-            await userRepository.insert({
-              discordUserId,
-              friendCode,
-              udemae: null,
-            });
-          }
-          await bot.helpers.addReaction(message.channelId, message.id, "👍");
-        } else {
-          await bot.helpers.sendMessage(discordEnv.channelIds.friendCode, {
-            content:
-              `<@${discordUserId}> お手数ですが、フレンドコードは \`XXXX-XXXX-XXXX\` の形式で再入力のほどよろしくお願いします :pray:`,
-          });
-        }
+    const friendCode = message.content.trim();
+    // フレンドコードとして妥当かどうかチェック
+    const discordUserId = message.authorId.toString();
+    if (friendCode.match(/^\d{4}-\d{4}-\d{4}$/)) {
+      // 排他制御できてないがよしとする。。。
+      const user = await userQueryService.findByDiscordId(discordUserId);
+      if (user) {
+        await userRepository.updateFriendCode(discordUserId, friendCode);
+      } else {
+        await userRepository.insert({
+          discordUserId,
+          friendCode,
+          udemae: null,
+        });
       }
+      await bot.helpers.addReaction(message.channelId, message.id, "👍");
+    } else {
+      await bot.helpers.sendMessage(
+        discordEnv.channelIds.friendCode,
+        generateFriendCodeInvalidMessage(discordUserId),
+      );
     }
   },
 };

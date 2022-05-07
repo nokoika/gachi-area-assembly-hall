@@ -1,9 +1,19 @@
 import { db } from "./filedbClient.ts";
 import { Application, Recruitment, RecruitmentLog, User } from "./entities.ts";
 import { Collection } from "./deps/filedb.ts";
-import { CreateArg, createDocument, updateDocument } from "./utils/document.ts";
-import { Udemae } from "./constants.ts";
-import { userQueryService } from "./queryServices.ts";
+import {
+  CreateArg,
+  createDocument,
+  updateDocument,
+  UUID,
+} from "./utils/document.ts";
+import { ApplicationType, Udemae } from "./constants.ts";
+import {
+  Bot,
+  DiscordenoInteraction,
+  InteractionResponseTypes,
+} from "./deps/discordeno.ts";
+import { withinDaysOf } from "./utils/date.ts";
 
 // TODO: あとでファイルを分割する
 
@@ -50,21 +60,34 @@ export const applicationRepository = {
   },
   async insert(data: CreateArg<Application>): Promise<void> {
     const collection = await this.getCollection();
+    // TODO: 最低限、recruitmentIdにつきuserIdの重複チェックくらいしたほうがいいか？
     collection.insertOne(createDocument({
       ...data,
       deletedAt: null,
     }));
   },
   // 申請をキャンセルする。内部的には論理削除
-  async cancel(discordUserId: string) {
+  async cancel(userId: UUID, recruitmentId: UUID): Promise<void> {
     const collection = await this.getCollection();
-    const user = await userQueryService.findByDiscordId(discordUserId);
-    if (!user) {
-      throw new Error("cancel user not found");
-    }
     collection.updateOne(
-      (application) => application.userId === user.id,
+      (application) =>
+        application.recruitmentId === recruitmentId &&
+        application.userId === userId && !application.deletedAt,
       updateDocument<Application>({ deletedAt: new Date() }),
+    );
+  },
+  // 後衛枠かどうかを変更する
+  async updateApplicationType(
+    userId: UUID,
+    recruitmentId: UUID,
+    applicationType: ApplicationType,
+  ): Promise<void> {
+    const collection = await this.getCollection();
+    collection.updateOne(
+      (application) =>
+        application.recruitmentId === recruitmentId &&
+        application.userId === userId && !application.deletedAt,
+      updateDocument<Application>({ applicationType }),
     );
   },
 };
@@ -76,5 +99,41 @@ export const recruitmentLogRepository = {
   async insert(data: CreateArg<RecruitmentLog>): Promise<void> {
     const collection = await this.getCollection();
     collection.insertOne(createDocument(data));
+  },
+};
+
+export const discordMessageRepository = {
+  async deleteChannelMessages(bot: Bot, channelId: bigint): Promise<void> {
+    // チャンネルの投稿を概ね削除する
+    const messages = await bot.helpers.getMessages(channelId);
+    const deletableMessageIds = messages
+      // 14日経過したメッセージは削除することができないので、filterする。
+      // 境界条件をちゃんと調査していないので適当に12日以内のものに限定する
+      .filter((m) => withinDaysOf(m.timestamp, 12))
+      .map((m) => m.id);
+    // 2件未満だとbulkDeleteできない謎仕様なので、件数で分岐する
+    if (deletableMessageIds.length >= 2) {
+      await bot.helpers.deleteMessages(channelId, deletableMessageIds);
+    } else if (deletableMessageIds.length === 1) {
+      await bot.helpers.deleteMessage(channelId, deletableMessageIds[0]);
+    }
+  },
+};
+
+export const discordInteractionRepository = {
+  async sendResponse(
+    bot: Bot,
+    interaction: DiscordenoInteraction,
+    content: string,
+  ): Promise<void> {
+    await bot.helpers.sendInteractionResponse(
+      interaction.id,
+      interaction.token,
+      {
+        type: InteractionResponseTypes.ChannelMessageWithSource,
+        private: true, // 返信は本人だけが確認できる
+        data: { content },
+      },
+    );
   },
 };

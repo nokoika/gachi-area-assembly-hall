@@ -46,9 +46,9 @@ export const scheduleHandlers = {
     // 募集しない時刻の場合はスキップ
     if (!currentRecruitment) return;
 
-    const applications = await applicationQueryService.findByRecruitmentId(
-      currentRecruitment.id,
-    );
+    const applications = await applicationQueryService.find({
+      recruitmentId: currentRecruitment.id,
+    });
     const roomCount = applications.length / 8 | 0;
     const remainder = applications.length % 8;
     if (remainder < 5) {
@@ -61,5 +61,6 @@ export const scheduleHandlers = {
   },
 
   // マッチング結果をルーム1~5およびDMにて通知する
-  async sendMatchResult(bot: Bot): Promise<void> {},
+  async sendMatchResult(bot: Bot): Promise<void> {
+  },
 };

@@ -34,11 +34,16 @@ export const applicationQueryService = {
   getCollection(): Promise<Collection<Application>> {
     return db.getCollection<Application>("applications");
   },
-  async findByRecruitmentId(recruitmentId: UUID): Promise<Application[]> {
+  async find(params: {
+    recruitmentId: UUID;
+    userId?: UUID;
+  }): Promise<Application[]> {
     const collection = await this.getCollection();
-    return collection
-      .findMany((a) => a.recruitmentId === recruitmentId)
-      .value();
+    return collection.findMany((a) =>
+      a.recruitmentId === params.recruitmentId &&
+      (!params.userId || a.userId === params.userId) &&
+      !a.deletedAt
+    ).value();
   },
 };
 
