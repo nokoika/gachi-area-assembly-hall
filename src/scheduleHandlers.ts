@@ -1,9 +1,15 @@
-import { Bot } from "./deps/discordeno.ts";
+import { Bot, sendDirectMessage } from "./deps/discordeno.ts";
 import { fetchAreaSchedule } from "./fetchAreaSchedule.ts";
-import { recruitmentRepository } from "./repositories.ts";
-import { createRecruitmentsFromSchedules } from "./logics.ts";
+import {
+  discordMessageRepository,
+  recruitmentLogRepository,
+  recruitmentRepository,
+} from "./repositories.ts";
+import { createMatching, createRecruitmentsFromSchedules } from "./logics.ts";
 import {
   generateInsufficientMessage,
+  generateMatchResultMessage,
+  generateNotHeldMessage,
   generateRecruitingMessage,
   generateScheduleMessage,
   getRecruitingChannel,
@@ -12,6 +18,7 @@ import { discordEnv } from "./env.ts";
 import {
   applicationQueryService,
   recruitmentQueryService,
+  userQueryService,
 } from "./queryServices.ts";
 
 export const scheduleHandlers = {
@@ -29,25 +36,25 @@ export const scheduleHandlers = {
 
   // 募集コメントをする
   async sendRecruitingMessage(bot: Bot): Promise<void> {
-    const currentRecruitment = await recruitmentQueryService.findRecent();
+    const recruitment = await recruitmentQueryService.findRecent();
 
     // 募集しない時刻の場合はスキップ
-    if (!currentRecruitment) return;
+    if (!recruitment) return;
 
-    const message = generateRecruitingMessage(currentRecruitment);
-    const channel = getRecruitingChannel(currentRecruitment.type);
+    const message = generateRecruitingMessage(recruitment);
+    const channel = getRecruitingChannel(recruitment.type);
     await bot.helpers.sendMessage(channel, message);
   },
 
   // 参加者が不足しているときにコメントする
   async sendInsufficientMessage(bot: Bot): Promise<void> {
-    const currentRecruitment = await recruitmentQueryService.findRecent();
+    const recruitment = await recruitmentQueryService.findRecent();
 
     // 募集しない時刻の場合はスキップ
-    if (!currentRecruitment) return;
+    if (!recruitment) return;
 
     const applications = await applicationQueryService.find({
-      recruitmentId: currentRecruitment.id,
+      recruitmentId: recruitment.id,
     });
     const roomCount = applications.length / 8 | 0;
     const remainder = applications.length % 8;
@@ -56,11 +63,44 @@ export const scheduleHandlers = {
       return;
     }
     const message = generateInsufficientMessage(roomCount, remainder);
-    const channel = getRecruitingChannel(currentRecruitment.type);
+    const channel = getRecruitingChannel(recruitment.type);
     await bot.helpers.sendMessage(channel, message);
   },
 
   // マッチング結果をルーム1~5およびDMにて通知する
   async sendMatchResult(bot: Bot): Promise<void> {
+    const recruitment = await recruitmentQueryService.findRecent();
+
+    // 募集しない時刻の場合はスキップ
+    if (!recruitment) return;
+
+    await discordMessageRepository.deleteChannelMessages(
+      bot,
+      getRecruitingChannel(recruitment.type),
+    );
+
+    const applications = await applicationQueryService.find({
+      recruitmentId: recruitment.id,
+    });
+    const users = await userQueryService.find({
+      ids: applications.map((a) => a.id),
+    });
+
+    const matchingResult = createMatching(recruitment, applications, users);
+    await recruitmentLogRepository.insert(matchingResult);
+
+    for (const idx in matchingResult.rooms) {
+      const room = matchingResult.rooms[idx];
+      const message = generateMatchResultMessage(room, recruitment);
+      await bot.helpers.sendMessage(discordEnv.channelIds.rooms[idx], message);
+    }
+
+    for (const user of matchingResult.remainders) {
+      await sendDirectMessage(
+        bot,
+        BigInt(user.discordUserId),
+        generateNotHeldMessage(matchingResult),
+      );
+    }
   },
 };

@@ -10,12 +10,15 @@ export const userQueryService = {
   getCollection(): Promise<Collection<User>> {
     return db.getCollection<User>("users");
   },
-  async findByDiscordId(id: string): Promise<User | undefined> {
+  async find(params: { ids: UUID[] }): Promise<User[]> {
+    const collection = await this.getCollection();
+    return collection.findMany((user) => params.ids.includes(user.id)).value();
+  },
+  async findByDiscordId(discordId: string): Promise<User | undefined> {
     const collection = await this.getCollection();
     // ライブラリの型がおかしいが、1件も見つからなかったらundefinedが返却されると思う
-    return collection.findOne((user) => user.discordUserId === id);
+    return collection.findOne((user) => user.discordUserId === discordId);
   },
-  // userIdから検索するのも必要かも
 };
 
 export const recruitmentQueryService = {

@@ -12,6 +12,17 @@ type DiscordEnv = {
     trainingMatch: bigint;
     rooms: bigint[];
   };
+  roles: {
+    x2300: bigint;
+    x2400: bigint;
+    x2500: bigint;
+    x2600: bigint;
+    x2700: bigint;
+    x2800: bigint;
+    x2900: bigint;
+    x3000: bigint;
+    x3100: bigint;
+  };
 };
 
 export const discordEnv: DiscordEnv = (() => {
@@ -29,6 +40,17 @@ export const discordEnv: DiscordEnv = (() => {
       Deno.env.get("CHANNEL_ROOM4"),
       Deno.env.get("CHANNEL_ROOM5"),
     ],
+  };
+  const roles = {
+    x2300: Deno.env.get("ROLE_X2300"),
+    x2400: Deno.env.get("ROLE_X2400"),
+    x2500: Deno.env.get("ROLE_X2500"),
+    x2600: Deno.env.get("ROLE_X2600"),
+    x2700: Deno.env.get("ROLE_X2700"),
+    x2800: Deno.env.get("ROLE_X2800"),
+    x2900: Deno.env.get("ROLE_X2900"),
+    x3000: Deno.env.get("ROLE_X3000"),
+    x3100: Deno.env.get("ROLE_X3100"),
   };
 
   if (!token) {
@@ -55,6 +77,33 @@ export const discordEnv: DiscordEnv = (() => {
       throw new Error(`env var CHANNEL_ROOM${idx} is not set`);
     }
   }
+  if (!roles.x2300) {
+    throw new Error("env var ROLE_X2300 is not set");
+  }
+  if (!roles.x2400) {
+    throw new Error("env var ROLE_X2400 is not set");
+  }
+  if (!roles.x2500) {
+    throw new Error("env var ROLE_X2500 is not set");
+  }
+  if (!roles.x2600) {
+    throw new Error("env var ROLE_X2600 is not set");
+  }
+  if (!roles.x2700) {
+    throw new Error("env var ROLE_X2700 is not set");
+  }
+  if (!roles.x2800) {
+    throw new Error("env var ROLE_X2800 is not set");
+  }
+  if (!roles.x2900) {
+    throw new Error("env var ROLE_X2900 is not set");
+  }
+  if (!roles.x3000) {
+    throw new Error("env var ROLE_X3000 is not set");
+  }
+  if (!roles.x3100) {
+    throw new Error("env var ROLE_X3100 is not set");
+  }
 
   const converted: DiscordEnv = {
     token,
@@ -65,6 +114,17 @@ export const discordEnv: DiscordEnv = (() => {
       preparationMatch: BigInt(channelIds.preparationMatch),
       trainingMatch: BigInt(channelIds.trainingMatch),
       rooms: (channelIds.rooms as string[]).map(BigInt), // undefinedチェック済のため型アサーションする
+    },
+    roles: {
+      x2300: BigInt(roles.x2300),
+      x2400: BigInt(roles.x2400),
+      x2500: BigInt(roles.x2500),
+      x2600: BigInt(roles.x2600),
+      x2700: BigInt(roles.x2700),
+      x2800: BigInt(roles.x2800),
+      x2900: BigInt(roles.x2900),
+      x3000: BigInt(roles.x3000),
+      x3100: BigInt(roles.x3100),
     },
   };
   return converted;

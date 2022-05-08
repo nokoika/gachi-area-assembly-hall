@@ -20,6 +20,7 @@ import {
   generateFriendCodeInvalidMessage,
   generateNotFriendCodeRegisteredMessage,
   generateNotRecruitingMessage,
+  getUdemaeFromRole,
 } from "./generateBotMessage.ts";
 
 export const eventHandlers: Partial<EventHandlers> = {
@@ -32,8 +33,8 @@ export const eventHandlers: Partial<EventHandlers> = {
     if (interaction.type !== InteractionTypes.MessageComponent) {
       return;
     }
-    const applicationType = interaction.data?.customId ?? "";
-    if (!hasEnumValue(applicationType, ApplicationType)) {
+    const type = interaction.data?.customId ?? "";
+    if (!hasEnumValue(type, ApplicationType)) {
       return;
     }
     const recruitment = await recruitmentQueryService.findRecent();
@@ -41,19 +42,19 @@ export const eventHandlers: Partial<EventHandlers> = {
       interaction.user.id.toString(),
     );
     if (!recruitment) {
-      // 申請ボタン消すからここまで丁寧に返信しなくてもよいが
+      // 申請ボタン消すからここまで丁寧に返信しなくてもよいかも
       const content = generateNotRecruitingMessage();
       await discordInteractionRepository
         .sendResponse(bot, interaction, content);
       return;
     }
     if (!user) {
-      const content = generateNotFriendCodeRegisteredMessage(applicationType);
+      const content = generateNotFriendCodeRegisteredMessage();
       await discordInteractionRepository
         .sendResponse(bot, interaction, content);
       return;
     }
-    switch (applicationType) {
+    switch (type) {
       case ApplicationType.ApplyFrontPlayer:
       case ApplicationType.ApplyBackPlayer: {
         let content: string;
@@ -61,17 +62,21 @@ export const eventHandlers: Partial<EventHandlers> = {
           recruitmentId: recruitment.id,
           userId: user.id,
         });
+        const udemae = getUdemaeFromRole(interaction.member?.roles ?? []);
+        // ウデマエロールが設定されてないなら、そもそも募集チャンネル開けないはずなので考慮不要
+        if (!udemae) return;
+        await userRepository.updateUdemae(user.id, udemae);
         if (application) {
           await applicationRepository
-            .updateApplicationType(user.id, recruitment.id, applicationType);
-          content = generateChangeApplicationTypeMessage(applicationType);
+            .updateApplicationType(user.id, recruitment.id, type);
+          content = generateChangeApplicationTypeMessage(type);
         } else {
           await applicationRepository.insert({
             recruitmentId: recruitment.id,
             userId: user.id,
-            applicationType,
+            type,
           });
-          content = generateCreateApplicationMessage(applicationType);
+          content = generateCreateApplicationMessage(type);
         }
 
         await discordInteractionRepository
@@ -112,13 +117,9 @@ export const eventHandlers: Partial<EventHandlers> = {
       // 排他制御できてないがよしとする。。。
       const user = await userQueryService.findByDiscordId(discordUserId);
       if (user) {
-        await userRepository.updateFriendCode(discordUserId, friendCode);
+        await userRepository.updateFriendCode(user.id, friendCode);
       } else {
-        await userRepository.insert({
-          discordUserId,
-          friendCode,
-          udemae: null,
-        });
+        await userRepository.insert({ discordUserId, friendCode });
       }
       await bot.helpers.addReaction(message.channelId, message.id, "👍");
     } else {

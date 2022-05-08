@@ -21,24 +21,30 @@ export const userRepository = {
   getCollection(): Promise<Collection<User>> {
     return db.getCollection<User>("users");
   },
-  async insert(data: CreateArg<User>): Promise<void> {
+  async insert(
+    data: Pick<User, "discordUserId" | "friendCode">,
+  ): Promise<void> {
     const collection = await this.getCollection();
-    collection.insertOne(createDocument(data));
+    collection.insertOne(createDocument({
+      ...data,
+      udemae: null,
+      participationCount: 0,
+    }));
   },
   async updateFriendCode(
-    discordUserId: string,
+    userId: UUID,
     friendCode: string,
   ): Promise<void> {
     const collection = await this.getCollection();
     collection.updateOne(
-      (user) => user.discordUserId === discordUserId,
+      (user) => user.id === userId,
       updateDocument<User>({ friendCode }),
     );
   },
-  async updateUdemae(discordUserId: bigint, udemae: Udemae): Promise<void> {
+  async updateUdemae(userId: UUID, udemae: Udemae): Promise<void> {
     const collection = await this.getCollection();
     collection.updateOne(
-      (user) => BigInt(user.discordUserId) === discordUserId,
+      (user) => user.id === userId,
       updateDocument<User>({ udemae }),
     );
   },
@@ -80,14 +86,14 @@ export const applicationRepository = {
   async updateApplicationType(
     userId: UUID,
     recruitmentId: UUID,
-    applicationType: ApplicationType,
+    type: ApplicationType,
   ): Promise<void> {
     const collection = await this.getCollection();
     collection.updateOne(
       (application) =>
         application.recruitmentId === recruitmentId &&
         application.userId === userId && !application.deletedAt,
-      updateDocument<Application>({ applicationType }),
+      updateDocument<Application>({ type }),
     );
   },
 };
