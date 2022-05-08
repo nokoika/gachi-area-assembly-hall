@@ -20,6 +20,7 @@ import {
   recruitmentQueryService,
   userQueryService,
 } from "./queryServices.ts";
+import { today } from "./utils/date.ts";
 
 export const scheduleHandlers = {
   // #スケジュール に当日の開催予定表をコメントする
@@ -27,7 +28,10 @@ export const scheduleHandlers = {
     const areaSchedules = await fetchAreaSchedule();
 
     // 予定をDBにいれておく (冪等にしたほうがいいか？)
-    const recruitments = createRecruitmentsFromSchedules(areaSchedules);
+    const recruitments = createRecruitmentsFromSchedules(
+      areaSchedules,
+      today(),
+    );
     await recruitmentRepository.insertMany(recruitments);
 
     const message = generateScheduleMessage(recruitments);

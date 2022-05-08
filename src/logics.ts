@@ -8,7 +8,8 @@ import {
 } from "./entities.ts";
 import dayjs from "./deps/dayjs.ts";
 import { CreateArg } from "./utils/document.ts";
-import { isRecent, today } from "./utils/date.ts";
+import { isRecent } from "./utils/date.ts";
+import { getCurrentMonthStages } from "./getCurrentMonthStages.ts";
 
 const createPreparationRecruitment = (
   willStartAt: dayjs.Dayjs,
@@ -22,36 +23,50 @@ const createPreparationRecruitment = (
 };
 
 const createTrainingRecruitment = (
-  willStartAt: dayjs.Dayjs,
+  willStartAt: dayjs.ConfigType,
+  today: dayjs.ConfigType,
 ): CreateArg<Recruitment> => {
   return {
     type: RecruitingType.Training,
-    stages: [],
-    willStartAt: willStartAt.toDate(),
+    stages: getCurrentMonthStages(today),
+    willStartAt: dayjs(willStartAt).toDate(),
   };
 };
 
-// トレーニングマッチは9,10,11時に開催。0次会はエリア開催の1時間前に開催。エリア開催中はトレーニングマッチは開催しない
-// TODO: UT
+// ・トレーニングマッチは9,10,11時に開催
+// ・0次会はエリア開催の1時間前に開催
+// ・0次会の開催時刻は昼の12時から24時のみ
+// ・エリア開催中はトレーニングマッチは開催しない
 export const createRecruitmentsFromSchedules = (
   areaSchedules: AreaSchedule[],
+  today: dayjs.ConfigType,
 ): CreateArg<Recruitment>[] => {
-  const preparationRecruitments = areaSchedules.map((s) => {
-    const willStartAt = dayjs(s.start).add(1, "h");
+  const preparationRecruitments = areaSchedules.filter((s) => {
+    const openingTime = dayjs(today).hour(12);
+    const closingTime = dayjs(today).hour(26);
+    return openingTime.isBefore(s.start) && closingTime.isAfter(s.start);
+  }).map((s) => {
+    const willStartAt = dayjs(s.start).subtract(1, "h");
     return createPreparationRecruitment(willStartAt, s.maps);
   });
-  const possibleTrainings = [9, 10, 11].map((h) => today().hour(h));
+  const possibleTrainings = [21, 22, 23].map((h) => dayjs(today).hour(h));
   const trainingRecruitments: CreateArg<Recruitment>[] = possibleTrainings
     // 0次会と重複するものを除外
-    .filter((d) =>
-      preparationRecruitments.find((r) => isRecent(r.willStartAt, d))
-    )
-    .map(createTrainingRecruitment);
+    .filter((d) => {
+      return preparationRecruitments.every((r) => !isRecent(r.willStartAt, d));
+    })
+    // ガチエリア開催時間のものを除外
+    .filter((d) => {
+      return areaSchedules.every((s) => {
+        return d.isBefore(s.start) || d.isAfter(s.end) || d.isSame(s.end);
+      });
+    })
+    .map((willStartAt) => createTrainingRecruitment(willStartAt, today));
   const merged = [...preparationRecruitments, ...trainingRecruitments]
     // 昇順
-    .sort((a, b) =>
-      a.willStartAt.getMilliseconds() - b.willStartAt.getMilliseconds()
-    );
+    .sort((a, b) => {
+      return a.willStartAt.getTime() - b.willStartAt.getTime();
+    });
   return merged;
 };
 
