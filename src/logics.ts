@@ -7,7 +7,7 @@ import {
   User,
 } from "./entities.ts";
 import dayjs from "./deps/dayjs.ts";
-import { CreateArg } from "./utils/document.ts";
+import { CreateArg, UUID } from "./utils/document.ts";
 import { isRecent } from "./utils/date.ts";
 import { getCurrentMonthStages } from "./getCurrentMonthStages.ts";
 
@@ -81,31 +81,53 @@ const filterBackPlayers = (
   });
 };
 
-// TODO: UT
-export const createMatching = (
+export const _sortByUdemae = (
+  users: User[],
+  getRandomFromUserId: (id: UUID) => number,
+): User[] => {
+  const randomCache: Record<UUID, number> = Object.fromEntries(
+    users.map((u) => [u.id, getRandomFromUserId(u.id)]),
+  );
+  const comparison = (a: User, b: User): number => {
+    if (!a.udemae || !b.udemae) {
+      // 参加に必須なのでウデマエは設定されているはず
+      throw new Error("There are unregistered users of Udemae");
+    }
+    // 降順
+    const diff = b.udemae - a.udemae;
+    if (diff !== 0) return diff;
+    // ウデマエが同じなら、ユーザーごとに設定したランダムな値で順序を決める (ランダムな部分は昇順)
+    return randomCache[a.id] - randomCache[b.id];
+  };
+  return users.concat().sort(comparison);
+};
+
+export const _createMatching = (
   recruitment: Recruitment,
   applications: Application[],
   users: User[],
+  getRandomIndex: (ary: unknown[]) => number,
+  sortByUdemae: (users: User[]) => User[],
 ): CreateArg<RecruitmentLog> => {
   const roomCount = applications.length / 8 | 0;
-  // 降順。参加に必須なのでウデマエは設定されているはず
-  const sorted = users.concat().sort((a, b) => b.udemae! - a.udemae!);
-  const remainderCount = sorted.length % 8;
+  const usersClone = users.concat();
+  const remainderCount = usersClone.length % 8;
 
   const remainders = [];
   for (let i = 0; i < remainderCount; i++) {
-    // lengthは変動
-    const randomIdx = Math.floor(Math.random() * sorted.length);
-    const [remainder] = sorted.splice(randomIdx, 1);
+    const randomIdx = getRandomIndex(usersClone);
+    const [remainder] = usersClone.splice(randomIdx, 1);
     remainders.push(remainder);
   }
+
+  const usersSorted = sortByUdemae(usersClone);
 
   // 8人ごとの部屋を複数つくる
   const roomList: User[][] = [];
   for (let i = 0; i < roomCount; i++) {
     const players = [];
     for (let j = 0; j < 8; j++) {
-      players.push(sorted[j + i * 8]);
+      players.push(usersSorted[j + i * 8]);
     }
     roomList.push(players);
   }
@@ -114,7 +136,7 @@ export const createMatching = (
     // 初見は基本親にならない
     const excludeFirstLook = room.filter((user) => user.participationCount > 0);
     const targets = excludeFirstLook.length > 0 ? excludeFirstLook : room;
-    const randomIdx = Math.floor(Math.random() * targets.length);
+    const randomIdx = getRandomIndex(targets);
     const host = targets[randomIdx];
     return {
       textChannelIdx: i + 1,
@@ -125,4 +147,30 @@ export const createMatching = (
   });
 
   return { recruitment, applications, rooms, remainders };
+};
+
+export const createMatching = (
+  recruitment: Recruitment,
+  applications: Application[],
+  users: User[],
+): CreateArg<RecruitmentLog> => {
+  const getRandomIndex = (ary: unknown[]): number => {
+    return Math.floor(Math.random() * ary.length);
+  };
+  const getRandomFromUserId = (_: UUID): number => {
+    return Math.random();
+  };
+
+  // _ から始まる関数は本来乱数に依存する機能だが、乱数の決定を外部に置くことで
+  // テスト可能な関数にしている
+  const sortByUdemae = (users: User[]): User[] => {
+    return _sortByUdemae(users, getRandomFromUserId);
+  };
+  return _createMatching(
+    recruitment,
+    applications,
+    users,
+    getRandomIndex,
+    sortByUdemae,
+  );
 };
