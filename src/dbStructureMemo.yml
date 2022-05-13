@@ -27,7 +27,6 @@ recruitmentLogs:
   recruitment: Recruitment
   applications: Application[]
   rooms:
-    textChannelIdx: number
     players: User[]
     backPlayers: User[]
     host: User

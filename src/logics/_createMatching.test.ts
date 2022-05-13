@@ -318,9 +318,6 @@ Deno.test("_createMatching 26人3部屋", () => {
   assertEquals(matching.rooms[0].host.id, "u6"); // 全員同じウデマエならu7だが、28がいるためずれる
   assertEquals(matching.rooms[1].host.id, "u8"); // 28がいるためずれる
   assertEquals(matching.rooms[2].host.id, "u11"); // 末尾選択。2300が一番後ろにいる
-  assertEquals(matching.rooms[0].textChannelIdx, 1);
-  assertEquals(matching.rooms[1].textChannelIdx, 2);
-  assertEquals(matching.rooms[2].textChannelIdx, 3);
   assertEquals(
     hasDuplicationByDocumentId([
       ...matching.rooms[0].players,

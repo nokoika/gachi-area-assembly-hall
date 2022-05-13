@@ -24,7 +24,6 @@ export type Application = Document<{
 }>;
 
 export type RoomLog = {
-  textChannelIdx: number;
   players: User[];
   backPlayers: User[];
   host: User;

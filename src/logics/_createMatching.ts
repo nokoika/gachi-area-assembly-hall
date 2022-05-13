@@ -69,14 +69,13 @@ export const _createMatching = (
     roomList.push(players);
   }
 
-  const rooms = roomList.map((room, i) => {
+  const rooms = roomList.map((room) => {
     // 初見は基本親にならない
     const excludeFirstLook = room.filter((user) => user.participationCount > 0);
     const targets = excludeFirstLook.length > 0 ? excludeFirstLook : room;
     const randomIdx = getRandomIndex(targets);
     const host = targets[randomIdx];
     return {
-      textChannelIdx: i + 1,
       players: room,
       backPlayers: filterBackPlayers(room, applications),
       host,
