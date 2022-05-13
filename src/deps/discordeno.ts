@@ -27,6 +27,8 @@ export async function sendDirectMessage(
   // CREATE A NEW DM CHANNEL AND PLUCK ITS ID
   const channel = (await bot.helpers.getDmChannel(userId));
 
+  await bot.helpers.sendMessage(channel.id, content);
+
   // CACHE IT FOR FUTURE REQUESTS
   dmChannelIds.set(userId, channel.id);
 

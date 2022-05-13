@@ -240,7 +240,7 @@ export const generateNotRecruitingMessage = (): string => {
 };
 
 export const generateNotFriendCodeRegisteredMessage = (): string => {
-  return `フレンドコードが未登録のため、申請を受理できませんでした。\n<#${discordEnv.channelIds.friendCode}> にて、自分のコードを登録してください。`;
+  return `フレンドコードが未登録のため、申請を受理できませんでした。\n<#${discordEnv.channelIds.friendCode}> にて自分のコードを登録してください。`;
 };
 
 export const generateChangeApplicationTypeMessage = (
