@@ -1,0 +1,11 @@
+[Unit]
+Description = gachi_area_assembly_hall
+
+[Service]
+WorkingDirectory = /home/ec2-user/gachi-area-assembly-hall
+ExecStart = /bin/bash -c "PATH=/home/ec2-user/.deno/bin/ deno task prod"
+Restart = always
+Type = simple
+
+[Install]
+WantedBy = multi-user.target

@@ -148,6 +148,12 @@ export const eventHandlers: Partial<EventHandlers> = {
             break;
           case "crash":
             throw new Error("crash message received");
+          case "ping":
+            await bot.helpers.sendMessage(
+              discordEnv.channelIds.command,
+              "pong",
+            );
+            break;
         }
         break;
       }
