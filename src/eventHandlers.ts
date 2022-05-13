@@ -20,8 +20,9 @@ import {
   generateFriendCodeInvalidMessage,
   generateNotFriendCodeRegisteredMessage,
   generateNotRecruitingMessage,
-  getUdemaeFromRole,
 } from "./generateBotMessage.ts";
+import { getUdemaeFromRole } from "./converters.ts";
+import { scheduleHandlers } from "./scheduleHandlers.ts";
 
 export const eventHandlers: Partial<EventHandlers> = {
   ready() {
@@ -107,26 +108,47 @@ export const eventHandlers: Partial<EventHandlers> = {
   async messageCreate(bot, message) {
     // bot自身が送ったメッセージなら無視
     if (message.isBot) return;
-    // 現状、ユーザーが #フレンドコード に入力したときのみ監視している
-    if (message.channelId !== discordEnv.channelIds.friendCode) return;
-
-    const friendCode = message.content.trim();
-    // フレンドコードとして妥当かどうかチェック
-    const discordUserId = message.authorId.toString();
-    if (friendCode.match(/^\d{4}-\d{4}-\d{4}$/)) {
-      // 排他制御できてないがよしとする。。。
-      const user = await userQueryService.findByDiscordId(discordUserId);
-      if (user) {
-        await userRepository.updateFriendCode(user.id, friendCode);
-      } else {
-        await userRepository.insert({ discordUserId, friendCode });
+    switch (message.channelId) {
+      // #フレンドコード 入力監視
+      case discordEnv.channelIds.friendCode: {
+        const friendCode = message.content.trim();
+        // フレンドコードとして妥当かどうかチェック
+        const discordUserId = message.authorId.toString();
+        if (friendCode.match(/^\d{4}-\d{4}-\d{4}$/)) {
+          // 排他制御できてないがよしとする。。。連投こわい
+          const user = await userQueryService.findByDiscordId(discordUserId);
+          if (user) {
+            await userRepository.updateFriendCode(user.id, friendCode);
+          } else {
+            await userRepository.insert({ discordUserId, friendCode });
+          }
+          await bot.helpers.addReaction(message.channelId, message.id, "👍");
+        } else {
+          await bot.helpers.sendMessage(
+            discordEnv.channelIds.friendCode,
+            generateFriendCodeInvalidMessage(discordUserId),
+          );
+        }
+        break;
       }
-      await bot.helpers.addReaction(message.channelId, message.id, "👍");
-    } else {
-      await bot.helpers.sendMessage(
-        discordEnv.channelIds.friendCode,
-        generateFriendCodeInvalidMessage(discordUserId),
-      );
+      // テスト用/非常事態用。batchを発火する
+      case discordEnv.channelIds.command: {
+        switch (message.content.trim()) {
+          case "send schedule":
+            scheduleHandlers.sendScheduleMessage(bot);
+            break;
+          case "send recruiting":
+            scheduleHandlers.sendRecruitingMessage(bot);
+            break;
+          case "send insufficient":
+            scheduleHandlers.sendInsufficientMessage(bot);
+            break;
+          case "send matching":
+            scheduleHandlers.sendMatchResult(bot);
+            break;
+        }
+        break;
+      }
     }
   },
 };

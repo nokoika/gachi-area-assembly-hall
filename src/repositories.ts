@@ -52,7 +52,7 @@ export const userRepository = {
 
 export const recruitmentRepository = {
   getCollection(): Promise<Collection<Recruitment>> {
-    return db.getCollection<Recruitment>("recruitment");
+    return db.getCollection<Recruitment>("recruitments");
   },
   async insertMany(dataList: CreateArg<Recruitment>[]): Promise<void> {
     const collection = await this.getCollection();
@@ -62,7 +62,7 @@ export const recruitmentRepository = {
 
 export const applicationRepository = {
   getCollection(): Promise<Collection<Application>> {
-    return db.getCollection<Application>("application");
+    return db.getCollection<Application>("applications");
   },
   async insert(data: CreateArg<Application>): Promise<void> {
     const collection = await this.getCollection();
@@ -100,7 +100,7 @@ export const applicationRepository = {
 
 export const recruitmentLogRepository = {
   getCollection(): Promise<Collection<RecruitmentLog>> {
-    return db.getCollection<RecruitmentLog>("recruitmentLog");
+    return db.getCollection<RecruitmentLog>("recruitmentLogs");
   },
   async insert(data: CreateArg<RecruitmentLog>): Promise<void> {
     const collection = await this.getCollection();

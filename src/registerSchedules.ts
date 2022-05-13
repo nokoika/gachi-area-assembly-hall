@@ -1,5 +1,5 @@
 import { Bot } from "./deps/discordeno.ts";
-import { cron } from "./deps/cron.ts";
+import { cron } from "./deps/deno_cron.ts";
 import { scheduleHandlers } from "./scheduleHandlers.ts";
 
 export const registerSchedules = (bot: Bot) => {

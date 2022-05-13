@@ -1,177 +1,8 @@
-import { assertEquals } from "https://deno.land/std@0.137.0/testing/asserts.ts";
-import { ApplicationType, RecruitingType, Udemae } from "./constants.ts";
-import { Application, Recruitment, User } from "./entities.ts";
-import { UUID } from "./utils/document.ts";
-import {
-  _createMatching,
-  _sortByUdemae,
-  createRecruitmentsFromSchedules,
-} from "./logics.ts";
-
-const mayStages = [
-  "フジツボスポーツクラブ",
-  "チョウザメ造船",
-  "タチウオパーキング",
-  "ホッケふ頭",
-  "ザトウマーケット",
-  "アジフライスタジアム",
-  "ショッツル鉱山",
-  "ムツゴ楼",
-];
-
-Deno.test("schedule logic case 1", () => {
-  const today = new Date("2022-05-08T11:00:00.000+0900");
-  const areaSchedules = [
-    {
-      maps: ["stage1", "stage2"],
-      start: new Date("2022-05-08T15:00:00.000+0900"),
-      end: new Date("2022-05-08T17:00:00.000+0900"),
-    },
-    {
-      maps: ["stage3", "stage4"],
-      start: new Date("2022-05-08T19:00:00.000+0900"),
-      end: new Date("2022-05-08T21:00:00.000+0900"),
-    },
-  ];
-  const recruitments = createRecruitmentsFromSchedules(areaSchedules, today);
-
-  assertEquals(recruitments[0].stages, ["stage1", "stage2"]);
-  assertEquals(recruitments[0].type, RecruitingType.Preparation);
-  assertEquals(
-    recruitments[0].willStartAt,
-    new Date("2022-05-08T14:00:00.000+0900"),
-  );
-
-  assertEquals(recruitments[1].stages, ["stage3", "stage4"]);
-  assertEquals(recruitments[1].type, RecruitingType.Preparation);
-  assertEquals(
-    recruitments[1].willStartAt,
-    new Date("2022-05-08T18:00:00.000+0900"),
-  );
-
-  assertEquals(recruitments[2].stages, mayStages);
-  assertEquals(recruitments[2].type, RecruitingType.Training);
-  assertEquals(
-    recruitments[2].willStartAt,
-    new Date("2022-05-08T21:00:00.000+0900"),
-  );
-
-  assertEquals(recruitments[3].stages, mayStages);
-  assertEquals(recruitments[3].type, RecruitingType.Training);
-  assertEquals(
-    recruitments[3].willStartAt,
-    new Date("2022-05-08T22:00:00.000+0900"),
-  );
-
-  assertEquals(recruitments[4].stages, mayStages);
-  assertEquals(recruitments[4].type, RecruitingType.Training);
-  assertEquals(
-    recruitments[4].willStartAt,
-    new Date("2022-05-08T23:00:00.000+0900"),
-  );
-
-  assertEquals(recruitments.length, 5);
-});
-
-Deno.test("schedule logic case 2", () => {
-  const today = new Date("2022-05-08T11:00:00.000+0900");
-  const areaSchedules = [
-    {
-      maps: ["stage1", "stage2"],
-      start: new Date("2022-05-08T05:00:00.000+0900"),
-      end: new Date("2022-05-08T07:00:00.000+0900"),
-    },
-    {
-      maps: ["stage3", "stage4"],
-      start: new Date("2022-05-08T11:00:00.000+0900"),
-      end: new Date("2022-05-08T13:00:00.000+0900"),
-    },
-    {
-      maps: ["stage5", "stage6"],
-      start: new Date("2022-05-08T21:00:00.000+0900"),
-      end: new Date("2022-05-08T23:00:00.000+0900"),
-    },
-    {
-      maps: ["stage7", "stage8"],
-      start: new Date("2022-05-09T01:00:00.000+0900"),
-      end: new Date("2022-05-09T03:00:00.000+0900"),
-    },
-    {
-      maps: ["stage9", "stage10"],
-      start: new Date("2022-05-09T05:00:00.000+0900"),
-      end: new Date("2022-05-09T07:00:00.000+0900"),
-    },
-  ];
-  const recruitments = createRecruitmentsFromSchedules(areaSchedules, today);
-
-  assertEquals(recruitments[0].stages, ["stage5", "stage6"]);
-  assertEquals(recruitments[0].type, RecruitingType.Preparation);
-  assertEquals(
-    recruitments[0].willStartAt,
-    new Date("2022-05-08T20:00:00.000+0900"),
-  );
-
-  assertEquals(recruitments[1].stages, mayStages);
-  assertEquals(recruitments[1].type, RecruitingType.Training);
-  assertEquals(
-    recruitments[1].willStartAt,
-    new Date("2022-05-08T23:00:00.000+0900"),
-  );
-
-  assertEquals(recruitments[2].stages, ["stage7", "stage8"]);
-  assertEquals(recruitments[2].type, RecruitingType.Preparation);
-  assertEquals(
-    recruitments[2].willStartAt,
-    new Date("2022-05-09T00:00:00.000+0900"),
-  );
-
-  assertEquals(recruitments.length, 3);
-});
-
-Deno.test("schedule logic case 3", () => {
-  const today = new Date("2022-05-08T11:00:00.000+0900");
-  const areaSchedules = [
-    {
-      maps: ["stage1", "stage2"],
-      start: new Date("2022-05-08T13:00:00.000+0900"),
-      end: new Date("2022-05-08T15:00:00.000+0900"),
-    },
-    {
-      maps: ["stage3", "stage4"],
-      start: new Date("2022-05-08T23:00:00.000+0900"),
-      end: new Date("2022-05-09T01:00:00.000+0900"),
-    },
-    {
-      maps: ["stage5", "stage6"],
-      start: new Date("2022-05-09T03:00:00.000+0900"),
-      end: new Date("2022-05-09T05:00:00.000+0900"),
-    },
-  ];
-  const recruitments = createRecruitmentsFromSchedules(areaSchedules, today);
-
-  assertEquals(recruitments[0].stages, ["stage1", "stage2"]);
-  assertEquals(recruitments[0].type, RecruitingType.Preparation);
-  assertEquals(
-    recruitments[0].willStartAt,
-    new Date("2022-05-08T12:00:00.000+0900"),
-  );
-
-  assertEquals(recruitments[1].stages, mayStages);
-  assertEquals(recruitments[1].type, RecruitingType.Training);
-  assertEquals(
-    recruitments[1].willStartAt,
-    new Date("2022-05-08T21:00:00.000+0900"),
-  );
-
-  assertEquals(recruitments[2].stages, ["stage3", "stage4"]);
-  assertEquals(recruitments[2].type, RecruitingType.Preparation);
-  assertEquals(
-    recruitments[2].willStartAt,
-    new Date("2022-05-08T22:00:00.000+0900"),
-  );
-
-  assertEquals(recruitments.length, 3);
-});
+import { assertEquals } from "../deps/std.ts";
+import { ApplicationType, RecruitingType, Udemae } from "../constants.ts";
+import { Application, Recruitment, User } from "../entities.ts";
+import { UUID } from "../utils/document.ts";
+import { _createMatching, _sortByUdemae } from "./_createMatching.ts";
 
 // 以下、_createMatching をテストする用の Utility
 
@@ -361,6 +192,7 @@ Deno.test("_createMatching 10人のときに1部屋できる", () => {
     recruitment,
     applications,
     users,
+    8,
     getRandomIndex,
     sortByUdemaeForTest,
   );
@@ -467,6 +299,7 @@ Deno.test("_createMatching 26人3部屋", () => {
     recruitment,
     applications,
     users,
+    8,
     getRandomIndex,
     sortByUdemaeForTest,
   );
@@ -546,6 +379,7 @@ Deno.test("_createMatching 7人のときは1部屋もできない", () => {
     recruitment,
     applications,
     users,
+    8,
     getRandomIndex,
     sortByUdemaeForTest,
   );
@@ -590,6 +424,7 @@ Deno.test("_createMatching 8人中4人が初見。初見さんはホストにし
     recruitment,
     applications,
     users,
+    8,
     getRandomIndex,
     sortByUdemaeForTest,
   );
@@ -639,6 +474,7 @@ Deno.test("_createMatching 全員が初見。ランダムにホストを決定�
     recruitment,
     applications,
     users,
+    8,
     getRandomIndex,
     sortByUdemaeForTest,
   );

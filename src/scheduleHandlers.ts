@@ -5,34 +5,41 @@ import {
   recruitmentLogRepository,
   recruitmentRepository,
 } from "./repositories.ts";
-import { createMatching, createRecruitmentsFromSchedules } from "./logics.ts";
+import { createMatching } from "./logics/createMatching.ts";
+import { createRecruitmentsFromSchedules } from "./logics/createRecruitmentsFromSchedules.ts";
 import {
   generateInsufficientMessage,
   generateMatchResultMessage,
   generateNotHeldMessage,
   generateRecruitingMessage,
   generateScheduleMessage,
-  getRecruitingChannel,
 } from "./generateBotMessage.ts";
+import { getRecruitingChannel } from "./converters.ts";
 import { discordEnv } from "./env.ts";
 import {
   applicationQueryService,
   recruitmentQueryService,
   userQueryService,
 } from "./queryServices.ts";
-import { today } from "./utils/date.ts";
+import { Recruitment } from "./entities.ts";
+import { CreateArg } from "./utils/document.ts";
+import { RecruitingType } from "./constants.ts";
 
 export const scheduleHandlers = {
   // #スケジュール に当日の開催予定表をコメントする
   async sendScheduleMessage(bot: Bot): Promise<void> {
-    const areaSchedules = await fetchAreaSchedule();
+    let recruitments: CreateArg<Recruitment>[] = await recruitmentQueryService
+      .findTodayRecruitments();
 
-    // 予定をDBにいれておく (冪等にしたほうがいいか？)
-    const recruitments = createRecruitmentsFromSchedules(
-      areaSchedules,
-      today(),
-    );
-    await recruitmentRepository.insertMany(recruitments);
+    // 冪等のため、ないときのみDBにいれる
+    if (!recruitments.length) {
+      const areaSchedules = await fetchAreaSchedule();
+      recruitments = createRecruitmentsFromSchedules(
+        areaSchedules,
+      );
+      // 予定をDBにいれておく
+      await recruitmentRepository.insertMany(recruitments);
+    }
 
     const message = generateScheduleMessage(recruitments);
     await bot.helpers.sendMessage(discordEnv.channelIds.schedule, message);
@@ -60,10 +67,11 @@ export const scheduleHandlers = {
     const applications = await applicationQueryService.find({
       recruitmentId: recruitment.id,
     });
-    const roomCount = applications.length / 8 | 0;
-    const remainder = applications.length % 8;
-    if (remainder < 5) {
-      // 通知しても意味なさそうなので通知しない
+    const roomCount = applications.length / discordEnv.roomSize | 0;
+    const remainder = applications.length % discordEnv.roomSize;
+    // のこり4人以上あつめないと同時開催数が増えないとき、
+    // 通知しても意味なさそうなので通知しない
+    if (remainder === 0 || discordEnv.roomSize - remainder > 3) {
       return;
     }
     const message = generateInsufficientMessage(roomCount, remainder);
@@ -73,21 +81,29 @@ export const scheduleHandlers = {
 
   // マッチング結果をルーム1~5およびDMにて通知する
   async sendMatchResult(bot: Bot): Promise<void> {
+    // 募集チャンネルのメッセージ消す
+    for (
+      const recruitingType of [
+        RecruitingType.Preparation,
+        RecruitingType.Training,
+      ]
+    ) {
+      await discordMessageRepository.deleteChannelMessages(
+        bot,
+        getRecruitingChannel(recruitingType),
+      );
+    }
+
     const recruitment = await recruitmentQueryService.findRecent();
 
     // 募集しない時刻の場合はスキップ
     if (!recruitment) return;
 
-    await discordMessageRepository.deleteChannelMessages(
-      bot,
-      getRecruitingChannel(recruitment.type),
-    );
-
     const applications = await applicationQueryService.find({
       recruitmentId: recruitment.id,
     });
     const users = await userQueryService.find({
-      ids: applications.map((a) => a.id),
+      ids: applications.map((a) => a.userId),
     });
 
     const matchingResult = createMatching(recruitment, applications, users);

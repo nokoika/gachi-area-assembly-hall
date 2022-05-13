@@ -2,7 +2,7 @@ import { db } from "./filedbClient.ts";
 import { Application, Recruitment, RecruitmentLog, User } from "./entities.ts";
 import { Collection } from "./deps/filedb.ts";
 import { UUID } from "./utils/document.ts";
-import { isRecent } from "./utils/date.ts";
+import { isRecent, isToday } from "./utils/date.ts";
 
 // TODO: あとでファイルを分割する
 
@@ -30,6 +30,10 @@ export const recruitmentQueryService = {
     const collection = await this.getCollection();
     // ライブラリの型がおかしいが、1件も見つからなかったらundefinedが返却されると思う
     return collection.findOne((r) => isRecent(r.willStartAt));
+  },
+  async findTodayRecruitments(): Promise<Recruitment[]> {
+    const collection = await this.getCollection();
+    return collection.findMany((r) => isToday(r.willStartAt)).value();
   },
 };
 

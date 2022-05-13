@@ -10,6 +10,7 @@ type DiscordEnv = {
     friendCode: bigint;
     preparationMatch: bigint;
     trainingMatch: bigint;
+    command: bigint;
     rooms: bigint[];
   };
   roles: {
@@ -23,6 +24,8 @@ type DiscordEnv = {
     x3000: bigint;
     x3100: bigint;
   };
+  useScheduleMock: boolean;
+  roomSize: number;
 };
 
 export const discordEnv: DiscordEnv = (() => {
@@ -33,6 +36,7 @@ export const discordEnv: DiscordEnv = (() => {
     friendCode: Deno.env.get("CHANNEL_FRIEND_CODE"),
     preparationMatch: Deno.env.get("CHANNEL_PREPARATION_MATCH"),
     trainingMatch: Deno.env.get("CHANNEL_TRAINING_MATCH"),
+    command: Deno.env.get("CHANNEL_COMMAND"),
     rooms: [
       Deno.env.get("CHANNEL_ROOM1"),
       Deno.env.get("CHANNEL_ROOM2"),
@@ -52,6 +56,8 @@ export const discordEnv: DiscordEnv = (() => {
     x3000: Deno.env.get("ROLE_X3000"),
     x3100: Deno.env.get("ROLE_X3100"),
   };
+  const useScheduleMock = Deno.env.get("USE_SCHEDULE_MOCK");
+  const roomSize = Deno.env.get("ROOM_SIZE");
 
   if (!token) {
     throw new Error("env var DISCORD_TOKEN is not set");
@@ -70,6 +76,9 @@ export const discordEnv: DiscordEnv = (() => {
   }
   if (!channelIds.trainingMatch) {
     throw new Error("env var CHANNEL_TRAINING_MATCH is not set");
+  }
+  if (!channelIds.command) {
+    throw new Error("env var CHANNEL_COMMAND is not set");
   }
   for (const idx in channelIds.rooms) {
     const room = channelIds.rooms[idx];
@@ -104,6 +113,12 @@ export const discordEnv: DiscordEnv = (() => {
   if (!roles.x3100) {
     throw new Error("env var ROLE_X3100 is not set");
   }
+  if (useScheduleMock === undefined) {
+    throw new Error("env var USE_SCHEDULE_MOCK is not set");
+  }
+  if (!roomSize) {
+    throw new Error("env var ROOM_SIZE is not set");
+  }
 
   const converted: DiscordEnv = {
     token,
@@ -113,6 +128,7 @@ export const discordEnv: DiscordEnv = (() => {
       friendCode: BigInt(channelIds.friendCode),
       preparationMatch: BigInt(channelIds.preparationMatch),
       trainingMatch: BigInt(channelIds.trainingMatch),
+      command: BigInt(channelIds.command),
       rooms: (channelIds.rooms as string[]).map(BigInt), // undefinedチェック済のため型アサーションする
     },
     roles: {
@@ -126,6 +142,8 @@ export const discordEnv: DiscordEnv = (() => {
       x3000: BigInt(roles.x3000),
       x3100: BigInt(roles.x3100),
     },
+    useScheduleMock: !!useScheduleMock,
+    roomSize: Number(roomSize),
   };
   return converted;
 })();

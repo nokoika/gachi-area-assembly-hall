@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.137.0/testing/asserts.ts";
+import { assertEquals } from "../deps/std.ts";
 import { hasEnumValue } from "./typeGuards.ts";
 
 Deno.test("hasEnumValue is able to use to EnumLike", () => {

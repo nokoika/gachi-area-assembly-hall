@@ -5,7 +5,7 @@ import {
   MessageComponentTypes,
 } from "./deps/discordeno.ts";
 import dayjs from "./deps/dayjs.ts";
-import { ApplicationType, RecruitingType, Udemae } from "./constants.ts";
+import { ApplicationType, RecruitingType } from "./constants.ts";
 import { Recruitment, RecruitmentLog, RoomLog } from "./entities.ts";
 import { CreateArg } from "./utils/document.ts";
 import { discordEnv } from "./env.ts";
@@ -78,21 +78,23 @@ export const generateMatchEmbed = (matchDetail: MatchDetail): Embed => {
       inline: true,
     },
     {
-      name: ":park: ステージ",
-      value: wrapCodeblock(
-        matchDetail.stages.join("/"),
-      ),
+      name: ":bar_chart: 試合数など",
+      value: wrapCodeblock(toMatchPlainText(matchDetail.recruitingType)),
       inline: true,
     },
     {
-      name: ":bar_chart: 試合数など",
-      value: wrapCodeblock(toMatchPlainText(matchDetail.recruitingType)),
+      name: ":park: ステージ",
+      value: wrapCodeblock(
+        matchDetail.stages.length === 2
+          ? matchDetail.stages.join("/")
+          : matchDetail.stages.join("\n"),
+      ),
       inline: false,
     },
     {
       name: ":gun: 武器変更",
       value: wrapCodeblock(
-        "あり(後衛枠かどうかは変わらない範囲で)",
+        "可 (後衛枠かどうかは変わらない範囲で)",
       ),
       inline: false,
     },
@@ -104,28 +106,21 @@ export const generateMatchEmbed = (matchDetail: MatchDetail): Embed => {
     {
       name: ":athletic_shoe: ギア変更",
       value: wrapCodeblock(
-        "あり",
+        "可",
       ),
       inline: true,
     },
     {
       name: ":camera: 観戦",
       value: wrapCodeblock(
-        "なし",
+        "不可",
       ),
       inline: true,
     },
     {
       name: ":play_pause: 配信/動画化",
       value: wrapCodeblock(
-        "あり (不穏のない範囲で)",
-      ),
-      inline: false,
-    },
-    {
-      name: ":play_pause: 配信/動画化",
-      value: wrapCodeblock(
-        "あり (不穏のない範囲で)",
+        "可 (不穏等ない範囲で)",
       ),
       inline: false,
     },
@@ -150,32 +145,9 @@ export const generateMatchEmbed = (matchDetail: MatchDetail): Embed => {
   return {
     title,
     type: "rich",
-    color: 15576321,
+    color: Math.floor(Math.random() * 16777215),
     fields,
   };
-};
-
-export const getRecruitingChannel = (type: RecruitingType): bigint => {
-  const o = {
-    [RecruitingType.Preparation]: discordEnv.channelIds.preparationMatch,
-    [RecruitingType.Training]: discordEnv.channelIds.trainingMatch,
-  };
-  return o[type];
-};
-
-export const getUdemaeFromRole = (roleIds: bigint[]): Udemae | undefined => {
-  const list: Array<[Udemae, bigint]> = [
-    [Udemae.X2300, discordEnv.roles.x2300],
-    [Udemae.X2400, discordEnv.roles.x2400],
-    [Udemae.X2500, discordEnv.roles.x2500],
-    [Udemae.X2600, discordEnv.roles.x2600],
-    [Udemae.X2700, discordEnv.roles.x2700],
-    [Udemae.X2800, discordEnv.roles.x2800],
-    [Udemae.X2900, discordEnv.roles.x2900],
-    [Udemae.X3000, discordEnv.roles.x3000],
-    [Udemae.X3100, discordEnv.roles.x3100],
-  ];
-  return list.find(([_udemae, roleId]) => roleIds.includes(roleId))?.[0];
 };
 
 export const generateRecruitingMessage = (
@@ -226,7 +198,7 @@ export const generateInsufficientMessage = (
   return {
     content: `@everyone ↑${currentRoom + 1}部屋${
       currentRoom >= 1 ? "同時" : ""
-    }開催まであと${8 - remainder}人です！`,
+    }開催まであと${discordEnv.roomSize - remainder}人です！`,
   };
 };
 
@@ -330,6 +302,7 @@ export const generateMatchResultMessage = (
     2: "後衛２枚であるため、後衛プレイヤーをアルファ/ブラボーに分け、残り6人はランダムに分けてください",
     3: [
       "後衛３枚であるため、以下のようにしてください。",
+      "・後衛枠の方は、自分が使用する武器をチャンネルにて宣言してください。",
       "・最も射程の長い後衛ブキ2枚をアルファ/ブラボー、残り6人をランダムで分けてください。",
       "・後衛ブキ被りがある場合は、被っている後衛ブキを使用するプレイヤーをアルファ/ブラボー、残り6人はランダムで分けてください。",
       // TODO: 誰と誰を分ける、をメッセージに組み込めると親切。現在、ユーザー名を収集してないのでまだ実現できない
