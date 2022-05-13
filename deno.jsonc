@@ -1,6 +1,7 @@
 {
   "tasks": {
     "dev": "cp env/.env.local env/.env && deno run --watch --allow-env --allow-net=discord.com,gateway.discord.gg,spla2.yuu26.com --allow-read --allow-write=./.data src/main.ts",
+    "prod": "cp env/.env.prod env/.env && deno run --allow-env --allow-net=discord.com,gateway.discord.gg,spla2.yuu26.com --allow-read --allow-write=./.data src/main.ts",
     "cache": "deno cache src/deps/*",
     "test": "deno test",
     "typecheck": "deno cache main.ts"
