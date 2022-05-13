@@ -146,6 +146,8 @@ export const eventHandlers: Partial<EventHandlers> = {
           case "send matching":
             scheduleHandlers.sendMatchResult(bot);
             break;
+          case "crash":
+            throw new Error("crash message received");
         }
         break;
       }
