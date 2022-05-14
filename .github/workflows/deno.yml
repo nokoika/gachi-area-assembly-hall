@@ -14,8 +14,8 @@ jobs:
       - uses: denoland/setup-deno@v1
         with:
           deno-version: 1.12.1
-      - run: deno task cache
-      - run: deno task test
-      - run: deno task typecheck
+      - run: deno cache src/deps/*
+      - run: deno test
+      - run: deno cache src/main.ts
       - run: deno lint
       - run: deno fmt --check
