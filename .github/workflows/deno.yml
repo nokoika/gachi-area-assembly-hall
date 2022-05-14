@@ -15,7 +15,7 @@ jobs:
         with:
           deno-version: 1.21.1
       - run: deno cache src/deps/*
-      - run: deno test
+      - run: TZ=Asia/Tokyo deno test
       - run: deno cache src/main.ts
       - run: deno lint
       - run: deno fmt --check
