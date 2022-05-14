@@ -24,9 +24,9 @@ export const isToday = (
   const template = "YYYY-MM-DD";
   // d.hour() は必ず 0-23
   if (d.hour() >= 4) {
-    return d.format(template) === c.format(template);
+    return d.tz().format(template) === c.tz().format(template);
   } else {
-    return d.format(template) === c.add(1, "d").format(template);
+    return d.tz().format(template) === c.add(1, "d").tz().format(template);
   }
 };
 
