@@ -13,7 +13,7 @@ jobs:
       - uses: actions/checkout@master
       - uses: denoland/setup-deno@v1
         with:
-          deno-version: 1.12.1
+          deno-version: 1.21.1
       - run: deno cache src/deps/*
       - run: deno test
       - run: deno cache src/main.ts
