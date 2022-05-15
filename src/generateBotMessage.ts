@@ -171,7 +171,7 @@ export const generateRecruitingMessage = (
             type: MessageComponentTypes.Button,
             customId: ApplicationType.ApplyFrontPlayer,
             style: ButtonStyles.Primary,
-            label: "参加申請する(後衛以外)",
+            label: "参加申請する(前衛中衛)",
           },
           {
             type: MessageComponentTypes.Button,
@@ -246,14 +246,14 @@ export const generateNotFriendCodeRegisteredMessage = (): string => {
 export const generateChangeApplicationTypeMessage = (
   type: ApplicationType,
 ): string => {
-  const typeText = type === ApplicationType.ApplyFrontPlayer ? "後衛以外" : "後衛";
+  const typeText = type === ApplicationType.ApplyFrontPlayer ? "前衛中衛" : "後衛";
   return typeText + "枠に参加申請を変更しました。";
 };
 
 export const generateCreateApplicationMessage = (
   type: ApplicationType,
 ): string => {
-  const typeText = type === ApplicationType.ApplyFrontPlayer ? "後衛以外" : "後衛";
+  const typeText = type === ApplicationType.ApplyFrontPlayer ? "前衛中衛" : "後衛";
   return typeText + "枠で参加申請しました。";
 };
 
