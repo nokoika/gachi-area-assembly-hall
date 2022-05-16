@@ -77,78 +77,66 @@ export const generateMatchEmbed = (matchDetail: MatchDetail): Embed => {
 
   const fields = [
     {
-      name: ":alarm_clock: 開催日時",
-      value: wrapCodeblock(
-        toDateTimeText(dayjs(matchDetail.willStartAt).minute(20)),
-      ),
+      name: "開催日時 :clock10:",
+      value: toDateTimeText(dayjs(matchDetail.willStartAt).minute(20)),
       inline: false,
     },
     {
-      name: ":crossed_swords: ルール",
-      value: wrapCodeblock("ガチエリア"),
+      name: "ルール :badminton:",
+      value: "ガチエリア",
       inline: true,
     },
     {
-      name: ":bar_chart: 試合数など",
-      value: wrapCodeblock(toMatchPlainText(matchDetail.recruitingType)),
+      name: "試合数など :arrows_counterclockwise: ",
+      value: toMatchPlainText(matchDetail.recruitingType),
       inline: true,
     },
     {
-      name: ":park: ステージ",
-      value: wrapCodeblock(
-        matchDetail.stages.length === 2
-          ? matchDetail.stages.join("/")
-          : matchDetail.stages.join("\n"),
-      ),
+      name: "ステージ :beach:",
+      value: matchDetail.stages.length === 2
+        ? matchDetail.stages.join("/")
+        : matchDetail.stages.join("\n"),
       inline: false,
     },
     {
-      name: ":gun: 武器変更",
-      value: wrapCodeblock(
-        "後衛枠ではない人に限り、後衛枠かどうか変わらない範囲で武器変更可",
-      ),
+      name: "武器変更 :gun:",
+      value: "後衛枠ではない人に限り、後衛枠かどうか変わらない範囲で武器変更可",
       inline: false,
     },
     {
-      name: ":calling: 通話",
-      value: wrapCodeblock("なし"),
+      name: "通話 :no_mobile_phones: ",
+      value: "なし",
       inline: true,
     },
     {
-      name: ":athletic_shoe: ギア変更",
-      value: wrapCodeblock(
-        "可",
-      ),
+      name: "ギア変更 :martial_arts_uniform:",
+      value: "可",
       inline: true,
     },
     {
-      name: ":camera: 観戦",
-      value: wrapCodeblock(
-        "不可",
-      ),
+      name: "観戦 :eye:",
+      value: "不可",
       inline: true,
     },
     {
-      name: ":play_pause: 配信/動画化",
-      value: wrapCodeblock(
-        "可 (不穏等ない範囲で)",
-      ),
+      name: "配信/動画化 :play_pause:",
+      value: "可 (不穏等ない範囲で)",
       inline: false,
     },
   ];
   if (matchDetail.parentFriendCode) {
     fields.unshift(
       {
-        name: ":hearts: 親フレンドコード",
-        value: wrapCodeblock(matchDetail.parentFriendCode),
+        name: "親フレンドコード :woman_astronaut:",
+        value: matchDetail.parentFriendCode,
         inline: true,
       },
     );
   }
   if (matchDetail.grouping) {
     fields.push({
-      name: ":game_die: チーム分け",
-      value: wrapCodeblock(matchDetail.grouping),
+      name: "チーム分け :game_die:",
+      value: matchDetail.grouping,
       inline: false,
     });
   }
@@ -221,7 +209,7 @@ const generateScheduleEmbed = (
     type: "rich",
     color: generateRandomColor(),
     fields: [{
-      name: `:date: ${toDateText(recruitments[0].willStartAt)}`,
+      name: `${toDateText(recruitments[0].willStartAt)} :date:`,
       value: wrapCodeblock(
         recruitments
           .map((r) =>
