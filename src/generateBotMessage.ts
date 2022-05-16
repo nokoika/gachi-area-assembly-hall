@@ -1,11 +1,18 @@
 import {
   ButtonStyles,
   CreateMessage,
+  DiscordenoInteractionResponse,
   Embed,
+  InteractionResponseTypes,
   MessageComponentTypes,
 } from "./deps/discordeno.ts";
 import dayjs from "./deps/dayjs.ts";
-import { ApplicationType, RecruitingType } from "./constants.ts";
+import {
+  ApplicationType,
+  RecruitingType,
+  REGISTER_FRIEND_CODE_BUTTON,
+  REGISTER_FRIEND_CODE_MODAL,
+} from "./constants.ts";
 import { Recruitment, RecruitmentLog, RoomLog } from "./entities.ts";
 import { CreateArg } from "./utils/document.ts";
 import { discordEnv } from "./env.ts";
@@ -58,6 +65,10 @@ const toDateTimeText = (date: Date | dayjs.Dayjs): string => {
 
 const toMention = (discordUserId: bigint | string): string => {
   return `<@${discordUserId}>`;
+};
+
+const generateRandomColor = (): number => {
+  return Math.floor(Math.random() * 16777215);
 };
 
 export const generateMatchEmbed = (matchDetail: MatchDetail): Embed => {
@@ -145,7 +156,7 @@ export const generateMatchEmbed = (matchDetail: MatchDetail): Embed => {
   return {
     title,
     type: "rich",
-    color: Math.floor(Math.random() * 16777215),
+    color: generateRandomColor(),
     fields,
   };
 };
@@ -208,7 +219,7 @@ const generateScheduleEmbed = (
   return {
     title: "スケジュール",
     type: "rich",
-    color: 15576321,
+    color: generateRandomColor(),
     fields: [{
       name: `:date: ${toDateText(recruitments[0].willStartAt)}`,
       value: wrapCodeblock(
@@ -247,14 +258,14 @@ export const generateChangeApplicationTypeMessage = (
   type: ApplicationType,
 ): string => {
   const typeText = type === ApplicationType.ApplyFrontPlayer ? "前衛中衛" : "後衛";
-  return typeText + "枠に参加申請を変更しました。";
+  return typeText + "枠に参加申請を変更しました。\n10分になるまでしばらくお待ち下さい :coffee:";
 };
 
 export const generateCreateApplicationMessage = (
   type: ApplicationType,
 ): string => {
   const typeText = type === ApplicationType.ApplyFrontPlayer ? "前衛中衛" : "後衛";
-  return typeText + "枠で参加申請しました。";
+  return typeText + "枠で参加申請しました。\n10分になるまでしばらくお待ち下さい :coffee:";
 };
 
 export const generateCanceledMessage = (): string => {
@@ -265,13 +276,53 @@ export const generateCancelFailedMessage = (): string => {
   return "キャンセルは参加申請をしたときのみ行えます";
 };
 
-export const generateFriendCodeInvalidMessage = (
-  discordUserId: string,
-): string => {
-  return `${
-    toMention(discordUserId)
-  } お手数ですが、 \`XXXX-XXXX-XXXX\` の形式でフレンドコードの再入力をよろしくお願いします :pray:`;
+export const generateFriendCodeButtonMessage = (): CreateMessage => {
+  return {
+    content: "以下のボタンを押してフレンドコードを登録してください。",
+    components: [
+      {
+        type: MessageComponentTypes.ActionRow,
+        components: [
+          {
+            type: MessageComponentTypes.Button,
+            customId: REGISTER_FRIEND_CODE_BUTTON,
+            style: ButtonStyles.Primary,
+            label: "フレンドコードを登録",
+          },
+        ],
+      },
+    ],
+  };
 };
+
+export const generateFriendCodeModalMessage =
+  (): DiscordenoInteractionResponse => {
+    return {
+      type: InteractionResponseTypes.Modal,
+      private: true, // 返信は本人だけが確認できる
+      data: {
+        title: "フレンドコードの登録",
+        customId: REGISTER_FRIEND_CODE_MODAL,
+        components: [
+          {
+            type: MessageComponentTypes.ActionRow,
+            components: [
+              {
+                type: MessageComponentTypes.InputText,
+                customId: REGISTER_FRIEND_CODE_MODAL,
+                placeholder: "XXXX-XXXX-XXXX",
+                style: 1, // 1: Short, 2: Paragraph https://discord.com/developers/docs/interactions/message-components#text-inputs-text-input-styles
+                label: "フレンドコード (XXXX-XXXX-XXXX の形式で入力してください 🙏)",
+                required: true,
+                minLength: 14,
+                maxLength: 14,
+              },
+            ],
+          },
+        ],
+      },
+    };
+  };
 
 export const generateNotHeldMessage = (
   matchResult: CreateArg<RecruitmentLog>,

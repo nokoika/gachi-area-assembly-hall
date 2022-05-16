@@ -25,3 +25,8 @@ export const Udemae = {
   X3100: 3100,
 } as const;
 export type Udemae = ValueOf<typeof Udemae>;
+
+export const REGISTER_FRIEND_CODE_BUTTON =
+  "register-friend-code-button" as const;
+
+export const REGISTER_FRIEND_CODE_MODAL = "register-friend-code-modal" as const;

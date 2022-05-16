@@ -11,6 +11,7 @@ import { ApplicationType, Udemae } from "./constants.ts";
 import {
   Bot,
   DiscordenoInteraction,
+  DiscordenoInteractionResponse,
   InteractionResponseTypes,
 } from "./deps/discordeno.ts";
 import { withinDaysOf } from "./utils/date.ts";
@@ -140,6 +141,17 @@ export const discordInteractionRepository = {
         private: true, // 返信は本人だけが確認できる
         data: { content },
       },
+    );
+  },
+  async sendModal(
+    bot: Bot,
+    interaction: DiscordenoInteraction,
+    content: DiscordenoInteractionResponse,
+  ): Promise<void> {
+    await bot.helpers.sendInteractionResponse(
+      interaction.id,
+      interaction.token,
+      content,
     );
   },
 };
