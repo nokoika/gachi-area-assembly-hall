@@ -1,5 +1,14 @@
-import { EventHandlers, InteractionTypes } from "./deps/discordeno.ts";
-import { ApplicationType } from "./constants.ts";
+import {
+  Bot,
+  DiscordenoInteraction,
+  EventHandlers,
+  InteractionTypes,
+} from "./deps/discordeno.ts";
+import {
+  ApplicationType,
+  REGISTER_FRIEND_CODE_BUTTON,
+  REGISTER_FRIEND_CODE_MODAL,
+} from "./constants.ts";
 import { discordEnv } from "./env.ts";
 import {
   applicationQueryService,
@@ -17,27 +26,54 @@ import {
   generateCancelFailedMessage,
   generateChangeApplicationTypeMessage,
   generateCreateApplicationMessage,
-  generateFriendCodeInvalidMessage,
+  generateFriendCodeButtonMessage,
+  generateFriendCodeModalMessage,
   generateNotFriendCodeRegisteredMessage,
   generateNotRecruitingMessage,
 } from "./generateBotMessage.ts";
 import { getUdemaeFromRole } from "./converters.ts";
 import { scheduleHandlers } from "./scheduleHandlers.ts";
+import { Application } from "./entities.ts";
 
-export const eventHandlers: Partial<EventHandlers> = {
-  ready() {
-    console.log("Successfully connected to gateway");
+// TODO: ファイルわける
+
+export const interactionServices = {
+  async registerFriendCode(bot: Bot, interaction: DiscordenoInteraction) {
+    // ライブラリの型がおかしい
+    const components = interaction.data?.components?.[0]
+      .components as unknown as Array<{ custom_id: string; value: string }>;
+    const friendCode = components.find((c) =>
+      c.custom_id === REGISTER_FRIEND_CODE_MODAL
+    )?.value;
+
+    if (!friendCode) {
+      throw new Error("friendCode could not be found");
+    }
+    const discordUserId = interaction.user.id.toString();
+    // フレンドコードとして妥当かどうかチェック
+    if (!friendCode.match(/^\d{4}-\d{4}-\d{4}$/)) {
+      // bot が反応しなければ modal にエラー文がながれる
+      return;
+    }
+
+    // 排他制御できてないがよしとする。。。連投こわい
+    const user = await userQueryService.findByDiscordId(discordUserId);
+    if (user) {
+      await userRepository.updateFriendCode(user.id, friendCode);
+    } else {
+      await userRepository.insert({ discordUserId, friendCode });
+    }
+    await discordInteractionRepository
+      .sendResponse(bot, interaction, "フレンドコードを登録しました👍");
   },
 
-  // 主にbotが表示したボタンをユーザーが押したとき
-  async interactionCreate(bot, interaction) {
-    if (interaction.type !== InteractionTypes.MessageComponent) {
-      return;
-    }
-    const type = interaction.data?.customId ?? "";
-    if (!hasEnumValue(type, ApplicationType)) {
-      return;
-    }
+  async openModal(bot: Bot, interaction: DiscordenoInteraction) {
+    const content = generateFriendCodeModalMessage();
+    await discordInteractionRepository
+      .sendModal(bot, interaction, content);
+  },
+
+  async updateApplication(bot: Bot, interaction: DiscordenoInteraction) {
     const recruitment = await recruitmentQueryService.findRecent();
     const user = await userQueryService.findByDiscordId(
       interaction.user.id.toString(),
@@ -55,14 +91,15 @@ export const eventHandlers: Partial<EventHandlers> = {
         .sendResponse(bot, interaction, content);
       return;
     }
+    const application: Application | undefined = await applicationQueryService
+      .find({ recruitmentId: recruitment.id, userId: user.id })
+      .then((ary) => ary[0]);
+
+    const type = interaction.data?.customId ?? "";
     switch (type) {
       case ApplicationType.ApplyFrontPlayer:
       case ApplicationType.ApplyBackPlayer: {
         let content: string;
-        const [application] = await applicationQueryService.find({
-          recruitmentId: recruitment.id,
-          userId: user.id,
-        });
         const udemae = getUdemaeFromRole(interaction.member?.roles ?? []);
         // ウデマエロールが設定されてないなら、そもそも募集チャンネル開けないはずなので考慮不要
         if (!udemae) return;
@@ -82,13 +119,9 @@ export const eventHandlers: Partial<EventHandlers> = {
 
         await discordInteractionRepository
           .sendResponse(bot, interaction, content);
-        break;
+        return;
       }
       case ApplicationType.Cancel: {
-        const [application] = await applicationQueryService.find({
-          recruitmentId: recruitment.id,
-          userId: user.id,
-        });
         if (!application) {
           const content = generateCancelFailedMessage();
           await discordInteractionRepository
@@ -99,8 +132,40 @@ export const eventHandlers: Partial<EventHandlers> = {
         await applicationRepository.cancel(user.id, recruitment.id);
         await discordInteractionRepository
           .sendResponse(bot, interaction, content);
-        break;
+        return;
       }
+    }
+  },
+};
+
+export const eventHandlers: Partial<EventHandlers> = {
+  ready() {
+    console.log("Successfully connected to gateway");
+  },
+
+  // 主にbotが表示したボタンをユーザーが押したとき
+  async interactionCreate(bot, interaction) {
+    const customId = interaction.data?.customId ?? "";
+    if (
+      interaction.type === InteractionTypes.ModalSubmit &&
+      customId === REGISTER_FRIEND_CODE_MODAL
+    ) {
+      await interactionServices.registerFriendCode(bot, interaction);
+      return;
+    }
+    if (
+      interaction.type === InteractionTypes.MessageComponent &&
+      customId === REGISTER_FRIEND_CODE_BUTTON
+    ) {
+      await interactionServices.openModal(bot, interaction);
+      return;
+    }
+    if (
+      interaction.type === InteractionTypes.MessageComponent &&
+      hasEnumValue(customId, ApplicationType)
+    ) {
+      await interactionServices.updateApplication(bot, interaction);
+      return;
     }
   },
 
@@ -108,55 +173,35 @@ export const eventHandlers: Partial<EventHandlers> = {
   async messageCreate(bot, message) {
     // bot自身が送ったメッセージなら無視
     if (message.isBot) return;
-    switch (message.channelId) {
-      // #フレンドコード 入力監視
-      case discordEnv.channelIds.friendCode: {
-        const friendCode = message.content.trim();
-        // フレンドコードとして妥当かどうかチェック
-        const discordUserId = message.authorId.toString();
-        if (friendCode.match(/^\d{4}-\d{4}-\d{4}$/)) {
-          // 排他制御できてないがよしとする。。。連投こわい
-          const user = await userQueryService.findByDiscordId(discordUserId);
-          if (user) {
-            await userRepository.updateFriendCode(user.id, friendCode);
-          } else {
-            await userRepository.insert({ discordUserId, friendCode });
-          }
-          await bot.helpers.addReaction(message.channelId, message.id, "👍");
-        } else {
-          await bot.helpers.sendMessage(
-            discordEnv.channelIds.friendCode,
-            generateFriendCodeInvalidMessage(discordUserId),
-          );
-        }
-        break;
-      }
-      // テスト用/非常事態用。batchを発火する
-      case discordEnv.channelIds.command: {
-        switch (message.content.trim()) {
-          case "send schedule":
-            scheduleHandlers.sendScheduleMessage(bot);
-            break;
-          case "send recruiting":
-            scheduleHandlers.sendRecruitingMessage(bot);
-            break;
-          case "send insufficient":
-            scheduleHandlers.sendInsufficientMessage(bot);
-            break;
-          case "send matching":
-            scheduleHandlers.sendMatchResult(bot);
-            break;
-          case "crash":
-            throw new Error("crash message received");
-          case "ping":
-            await bot.helpers.sendMessage(
-              discordEnv.channelIds.command,
-              "pong",
-            );
-            break;
-        }
-        break;
-      }
+    if (message.channelId !== discordEnv.channelIds.command) return;
+    // テスト用/非常事態/運用
+    switch (message.content.trim()) {
+      case "send schedule":
+        scheduleHandlers.sendScheduleMessage(bot);
+        return;
+      case "send recruiting":
+        scheduleHandlers.sendRecruitingMessage(bot);
+        return;
+      case "send insufficient":
+        scheduleHandlers.sendInsufficientMessage(bot);
+        return;
+      case "send matching":
+        scheduleHandlers.sendMatchResult(bot);
+        return;
+      case "crash":
+        throw new Error("crash message received");
+      case "ping":
+        await bot.helpers.sendMessage(
+          discordEnv.channelIds.command,
+          "pong",
+        );
+        return;
+      case "send friend code button":
+        await bot.helpers.sendMessage(
+          discordEnv.channelIds.friendCode,
+          generateFriendCodeButtonMessage(),
+        );
+        return;
     }
   },
 };

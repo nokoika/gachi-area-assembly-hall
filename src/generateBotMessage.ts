@@ -1,11 +1,18 @@
 import {
   ButtonStyles,
   CreateMessage,
+  DiscordenoInteractionResponse,
   Embed,
+  InteractionResponseTypes,
   MessageComponentTypes,
 } from "./deps/discordeno.ts";
 import dayjs from "./deps/dayjs.ts";
-import { ApplicationType, RecruitingType } from "./constants.ts";
+import {
+  ApplicationType,
+  RecruitingType,
+  REGISTER_FRIEND_CODE_BUTTON,
+  REGISTER_FRIEND_CODE_MODAL,
+} from "./constants.ts";
 import { Recruitment, RecruitmentLog, RoomLog } from "./entities.ts";
 import { CreateArg } from "./utils/document.ts";
 import { discordEnv } from "./env.ts";
@@ -60,84 +67,76 @@ const toMention = (discordUserId: bigint | string): string => {
   return `<@${discordUserId}>`;
 };
 
+const generateRandomColor = (): number => {
+  return Math.floor(Math.random() * 16777215);
+};
+
 export const generateMatchEmbed = (matchDetail: MatchDetail): Embed => {
   const title = toRecruitingTypeText(matchDetail.recruitingType) +
     toMatchStatusText(matchDetail.confirmed);
 
   const fields = [
     {
-      name: ":alarm_clock: 開催日時",
-      value: wrapCodeblock(
-        toDateTimeText(dayjs(matchDetail.willStartAt).minute(20)),
-      ),
+      name: "開催日時 :clock10:",
+      value: toDateTimeText(dayjs(matchDetail.willStartAt).minute(20)),
       inline: false,
     },
     {
-      name: ":crossed_swords: ルール",
-      value: wrapCodeblock("ガチエリア"),
+      name: "ルール :badminton:",
+      value: "ガチエリア",
       inline: true,
     },
     {
-      name: ":bar_chart: 試合数など",
-      value: wrapCodeblock(toMatchPlainText(matchDetail.recruitingType)),
+      name: "試合数など :arrows_counterclockwise: ",
+      value: toMatchPlainText(matchDetail.recruitingType),
       inline: true,
     },
     {
-      name: ":park: ステージ",
-      value: wrapCodeblock(
-        matchDetail.stages.length === 2
-          ? matchDetail.stages.join("/")
-          : matchDetail.stages.join("\n"),
-      ),
+      name: "ステージ :beach:",
+      value: matchDetail.stages.length === 2
+        ? matchDetail.stages.join("/")
+        : matchDetail.stages.join("\n"),
       inline: false,
     },
     {
-      name: ":gun: 武器変更",
-      value: wrapCodeblock(
-        "後衛枠ではない人に限り、後衛枠かどうか変わらない範囲で武器変更可",
-      ),
+      name: "武器変更 :gun:",
+      value: "後衛枠ではない人に限り、後衛枠かどうか変わらない範囲で武器変更可",
       inline: false,
     },
     {
-      name: ":calling: 通話",
-      value: wrapCodeblock("なし"),
+      name: "通話 :no_mobile_phones: ",
+      value: "なし",
       inline: true,
     },
     {
-      name: ":athletic_shoe: ギア変更",
-      value: wrapCodeblock(
-        "可",
-      ),
+      name: "ギア変更 :martial_arts_uniform:",
+      value: "可",
       inline: true,
     },
     {
-      name: ":camera: 観戦",
-      value: wrapCodeblock(
-        "不可",
-      ),
+      name: "観戦 :eye:",
+      value: "不可",
       inline: true,
     },
     {
-      name: ":play_pause: 配信/動画化",
-      value: wrapCodeblock(
-        "可 (不穏等ない範囲で)",
-      ),
+      name: "配信/動画化 :play_pause:",
+      value: "可 (不穏等ない範囲で)",
       inline: false,
     },
   ];
   if (matchDetail.parentFriendCode) {
     fields.unshift(
       {
-        name: ":hearts: 親フレンドコード",
-        value: wrapCodeblock(matchDetail.parentFriendCode),
+        name: "親フレンドコード :woman_astronaut:",
+        value: matchDetail.parentFriendCode,
         inline: true,
       },
     );
   }
   if (matchDetail.grouping) {
     fields.push({
-      name: ":game_die: チーム分け",
-      value: wrapCodeblock(matchDetail.grouping),
+      name: "チーム分け :game_die:",
+      value: matchDetail.grouping,
       inline: false,
     });
   }
@@ -145,7 +144,7 @@ export const generateMatchEmbed = (matchDetail: MatchDetail): Embed => {
   return {
     title,
     type: "rich",
-    color: Math.floor(Math.random() * 16777215),
+    color: generateRandomColor(),
     fields,
   };
 };
@@ -208,9 +207,9 @@ const generateScheduleEmbed = (
   return {
     title: "スケジュール",
     type: "rich",
-    color: 15576321,
+    color: generateRandomColor(),
     fields: [{
-      name: `:date: ${toDateText(recruitments[0].willStartAt)}`,
+      name: `${toDateText(recruitments[0].willStartAt)} :date:`,
       value: wrapCodeblock(
         recruitments
           .map((r) =>
@@ -247,14 +246,14 @@ export const generateChangeApplicationTypeMessage = (
   type: ApplicationType,
 ): string => {
   const typeText = type === ApplicationType.ApplyFrontPlayer ? "前衛中衛" : "後衛";
-  return typeText + "枠に参加申請を変更しました。";
+  return typeText + "枠に参加申請を変更しました。\n10分になるまでしばらくお待ち下さい :coffee:";
 };
 
 export const generateCreateApplicationMessage = (
   type: ApplicationType,
 ): string => {
   const typeText = type === ApplicationType.ApplyFrontPlayer ? "前衛中衛" : "後衛";
-  return typeText + "枠で参加申請しました。";
+  return typeText + "枠で参加申請しました。\n10分になるまでしばらくお待ち下さい :coffee:";
 };
 
 export const generateCanceledMessage = (): string => {
@@ -265,13 +264,53 @@ export const generateCancelFailedMessage = (): string => {
   return "キャンセルは参加申請をしたときのみ行えます";
 };
 
-export const generateFriendCodeInvalidMessage = (
-  discordUserId: string,
-): string => {
-  return `${
-    toMention(discordUserId)
-  } お手数ですが、 \`XXXX-XXXX-XXXX\` の形式でフレンドコードの再入力をよろしくお願いします :pray:`;
+export const generateFriendCodeButtonMessage = (): CreateMessage => {
+  return {
+    content: "以下のボタンを押してフレンドコードを登録してください。",
+    components: [
+      {
+        type: MessageComponentTypes.ActionRow,
+        components: [
+          {
+            type: MessageComponentTypes.Button,
+            customId: REGISTER_FRIEND_CODE_BUTTON,
+            style: ButtonStyles.Primary,
+            label: "フレンドコードを登録",
+          },
+        ],
+      },
+    ],
+  };
 };
+
+export const generateFriendCodeModalMessage =
+  (): DiscordenoInteractionResponse => {
+    return {
+      type: InteractionResponseTypes.Modal,
+      private: true, // 返信は本人だけが確認できる
+      data: {
+        title: "フレンドコードの登録",
+        customId: REGISTER_FRIEND_CODE_MODAL,
+        components: [
+          {
+            type: MessageComponentTypes.ActionRow,
+            components: [
+              {
+                type: MessageComponentTypes.InputText,
+                customId: REGISTER_FRIEND_CODE_MODAL,
+                placeholder: "XXXX-XXXX-XXXX",
+                style: 1, // 1: Short, 2: Paragraph https://discord.com/developers/docs/interactions/message-components#text-inputs-text-input-styles
+                label: "フレンドコード (XXXX-XXXX-XXXX の形式で入力してください 🙏)",
+                required: true,
+                minLength: 14,
+                maxLength: 14,
+              },
+            ],
+          },
+        ],
+      },
+    };
+  };
 
 export const generateNotHeldMessage = (
   matchResult: CreateArg<RecruitmentLog>,
