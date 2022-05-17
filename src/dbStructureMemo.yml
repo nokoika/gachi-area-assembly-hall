@@ -22,6 +22,7 @@ applications: # 申請=applicationとする
   updatedAt: Date
   deletedAt: Date? # キャンセルで申請を削除。再度申請する場合は新しくapplicationを追加
 
+# ログ用。アプリケーションとしては必須ではない
 recruitmentLogs:
   id: UUID
   recruitment: Recruitment
@@ -30,6 +31,8 @@ recruitmentLogs:
     players: User[]
     backPlayers: User[]
     host: User
+    alpha: User[]
+    bravo: User[]
   participants: User[]
   remainders: User[]
   createdAt: Date

@@ -15,8 +15,7 @@ export const createMatching = (
     return Math.random();
   };
 
-  // _ から始まる関数は本来乱数に依存する機能だが、乱数の決定を外部に置くことで
-  // テスト可能な関数にしている
+  // 乱数の決定を外部に置くことでテスト可能な関数にしている
   const sortByUdemae = (users: User[]): User[] => {
     return _sortByUdemae(users, getRandomFromUserId);
   };

@@ -329,25 +329,21 @@ export const generateMatchResultMessage = (
 ): CreateMessage => {
   const mentions = room.players.map((u) => {
     const mention = toMention(u.discordUserId);
-    const host = room.host.discordUserId === u.discordUserId ? " <親>" : "";
+    const host = room.host.discordUserId === u.discordUserId ? "<親>" : "";
     const back = room.backPlayers.map((back) => back.id).includes(u.id)
-      ? " [後衛]"
+      ? "[後衛]"
       : "";
-    return mention + host + back;
+    const alpha = room.alpha.map((a) => a.id).includes(u.id) ? "(アルファ)" : "";
+    const bravo = room.bravo.map((b) => b.id).includes(u.id) ? "(ブラボー)" : "";
+
+    return [mention, host, back, alpha, bravo].join(" ");
   });
   const groupings: Record<number, string> = {
     0: "後衛０枚であるため、全員ランダム",
     1: "後衛１枚であるため、全員ランダム",
-    2: "後衛２枚であるため、後衛プレイヤーをアルファ/ブラボーに分け、残り6人はランダムに分けてください",
-    3: [
-      "後衛３枚であるため、以下のようにしてください。",
-      "・後衛枠の方は、自分が使用する武器をチャンネルにて宣言してください。",
-      "・最も射程の長い後衛ブキ2枚をアルファ/ブラボー、残り6人をランダムで分けてください。",
-      "・後衛ブキ被りがある場合は、被っている後衛ブキを使用するプレイヤーをアルファ/ブラボー、残り6人はランダムで分けてください。",
-      // TODO: 誰と誰を分ける、をメッセージに組み込めると親切。現在、ユーザー名を収集してないのでまだ実現できない
-      "・3人とも同じ後衛ブキを使用する場合は、XPロールが近い2人をアルファ/ブラボー、残り6人をランダムで分けてください。",
-    ].join("\n"),
-    4: "後衛４枚であるため、全員ランダム",
+    2: "後衛２枚であるため、上記 (アルファ)(ブラボー) マークをもとに後衛プレイヤーを分け、残り6人はランダムに分けてください",
+    3: "後衛３枚であるため、上記 (アルファ)(ブラボー) マークをもとに後衛プレイヤーを分け、残り6人はランダムに分けてください",
+    4: "後衛４枚であるため、上記 (アルファ)(ブラボー) マークをもとに後衛プレイヤーを分け、残り4人はランダムに分けてください",
     5: "後衛５枚であるため、全員ランダム",
     6: "後衛６枚であるため、全員ランダム",
     7: "後衛７枚であるため、全員ランダム",

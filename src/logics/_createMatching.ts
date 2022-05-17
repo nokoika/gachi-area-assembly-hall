@@ -34,6 +34,33 @@ export const _sortByUdemae = (
   return users.concat().sort(comparison);
 };
 
+type AlphaBravo = {
+  alpha: User[];
+  bravo: User[];
+};
+export const _splitBackPlayersToAlphaBravo = (
+  backPlayers: User[],
+): AlphaBravo => {
+  // backPlayersがウデマエ降順でソートされている前提
+  switch (backPlayers.length) {
+    case 2:
+      return { alpha: [backPlayers[0]], bravo: [backPlayers[1]] };
+    case 3: {
+      // 強い人には申し訳ないですが編成事故ってもらいます。
+      // 後衛プレイヤーのうち誰かが固定で編成事故になってしまうのですが、
+      // 一番弱い人が常に不利になってしまうのを避けるためです。
+      return { alpha: [backPlayers[1]], bravo: [backPlayers[2]] };
+    }
+    case 4:
+      return {
+        alpha: [backPlayers[0], backPlayers[3]],
+        bravo: [backPlayers[1], backPlayers[2]],
+      };
+    default:
+      return { alpha: [], bravo: [] };
+  }
+};
+
 export const _createMatching = (
   recruitment: Recruitment,
   applications: Application[],
@@ -69,17 +96,15 @@ export const _createMatching = (
     roomList.push(players);
   }
 
-  const rooms = roomList.map((room) => {
+  const rooms = roomList.map((players) => {
     // 初見は基本親にならない
-    const excludeFirstLook = room.filter((user) => user.participationCount > 0);
-    const targets = excludeFirstLook.length > 0 ? excludeFirstLook : room;
+    const excludeFirstLook = players.filter((p) => p.participationCount > 0);
+    const targets = excludeFirstLook.length > 0 ? excludeFirstLook : players;
     const randomIdx = getRandomIndex(targets);
     const host = targets[randomIdx];
-    return {
-      players: room,
-      backPlayers: filterBackPlayers(room, applications),
-      host,
-    };
+    const backPlayers = filterBackPlayers(players, applications);
+    const { alpha, bravo } = _splitBackPlayersToAlphaBravo(backPlayers);
+    return { players, backPlayers, host, alpha, bravo };
   });
 
   return { recruitment, applications, rooms, remainders };

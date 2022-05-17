@@ -313,6 +313,12 @@ Deno.test("_createMatching 26人3部屋", () => {
   assertEquals(matching.rooms[0].backPlayers.length, 2); // 全員同じウデマエなら3だが、28がいるためずれる
   assertEquals(matching.rooms[1].backPlayers.length, 4);
   assertEquals(matching.rooms[2].backPlayers.length, 3);
+  assertEquals(matching.rooms[0].alpha.length, 1);
+  assertEquals(matching.rooms[0].bravo.length, 1);
+  assertEquals(matching.rooms[1].alpha.length, 2);
+  assertEquals(matching.rooms[1].bravo.length, 2);
+  assertEquals(matching.rooms[2].alpha.length, 1);
+  assertEquals(matching.rooms[2].bravo.length, 1);
   assertEquals(matching.rooms[0].players[0].id, "u15"); // 先頭2800
   assertEquals(matching.rooms[2].players[7].id, "u11"); // 末尾2300
   assertEquals(matching.rooms[0].host.id, "u6"); // 全員同じウデマエならu7だが、28がいるためずれる
@@ -331,6 +337,17 @@ Deno.test("_createMatching 26人3部屋", () => {
       ...matching.rooms[0].backPlayers,
       ...matching.rooms[1].backPlayers,
       ...matching.rooms[2].backPlayers,
+    ]),
+    false,
+  );
+  assertEquals(
+    hasDuplicationByDocumentId([
+      ...matching.rooms[0].alpha,
+      ...matching.rooms[0].bravo,
+      ...matching.rooms[1].alpha,
+      ...matching.rooms[1].bravo,
+      ...matching.rooms[2].alpha,
+      ...matching.rooms[2].bravo,
     ]),
     false,
   );

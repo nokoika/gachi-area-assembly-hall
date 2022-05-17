@@ -26,6 +26,8 @@ export type Application = Document<{
 export type RoomLog = {
   players: User[];
   backPlayers: User[];
+  alpha: User[];
+  bravo: User[];
   host: User;
 };
 
