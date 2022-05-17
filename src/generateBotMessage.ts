@@ -100,7 +100,7 @@ export const generateMatchEmbed = (matchDetail: MatchDetail): Embed => {
     },
     {
       name: "武器変更 :gun:",
-      value: "後衛枠ではない人に限り、後衛枠かどうか変わらない範囲で武器変更可",
+      value: "後衛枠かどうか変わらない範囲で武器変更可",
       inline: false,
     },
     {
